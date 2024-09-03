@@ -58,7 +58,7 @@ class Codebase:
     def is_code(url: str) -> bool:
         parsed_url = urlparse(url)
         domain = parsed_url.netloc.lower()
-        path = parsed_url.path.lower()
+        # path = parsed_url.path.lower()
 
         if "github.com" in domain: # and "/blob/" not in path:
             return True
