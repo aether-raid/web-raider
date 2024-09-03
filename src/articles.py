@@ -19,13 +19,16 @@ class CodeArticle(Article):
         
         self.code_domains = code_domains
         
-        if download: self.download()
-        if parse: self.parse()
+        if download:
+            self.download()
+        if parse:
+            self.parse()
 
     def code_urls(self):
         results = set()
         for elem, key, url, _ in self.clean_top_node.iterlinks():
-            if elem.tag != "a": continue
+            if elem.tag != "a":
+                continue
             assert key == "href"
             
             if any(domain in url for domain in self.code_domains):
