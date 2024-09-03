@@ -1,12 +1,12 @@
 from newspaper import Article
 
-from .codebase import Codebase
+from codebase import Codebase
 
 
 CODE_DOMAINS =  [
     "github.com",
-    "bitbucket.org",
-    "gitlab.com"
+    # "bitbucket.org",
+    # "gitlab.com"
 ]
 
 class CodeArticle(Article):
