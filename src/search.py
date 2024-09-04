@@ -1,14 +1,10 @@
-from googlesearch import search
+# src/search.py
 
-CODE_BLACKLIST = [
-    "stackoverflow.com",
-    "quora.com",
-    "tutorialspoint.com",
-    "w3schools.com",
-    "programiz.com",
-    "javatpoint.com",
-    "geeksforgeeks.org"
-]
+from googlesearch import search, SearchResult
+from typing import Generator
+
+from constants import CODE_BLACKLIST
+
 
 class GoogleSearch:
     def __init__(self, query: str,
@@ -19,10 +15,34 @@ class GoogleSearch:
             advanced=True
         )
         self.blacklist = blacklist
-        
-    def relevant_urls(self):
+            
+        self._search_archive: list[SearchResult] = []
+    
+    def urls(self) -> Generator[str, None, None]:
         results = set()
+        
+        for result in self._search_archive:
+            if all(domain not in result.url for domain in self.blacklist) and result.url not in results:
+                yield result.url
+                results.add(result.url)
+        
         for result in self.search_results:
+            self._search_archive.append(result)
+            if all(domain not in result.url for domain in self.blacklist) and result.url not in results:
+                yield result.url
+                results.add(result.url)
+        
+        
+    def relevant_urls(self) -> Generator[str, None, None]:
+        results = set()
+        
+        for result in self._search_archive:
+            if all(domain not in result.url for domain in self.blacklist) and result.url not in results:
+                yield result.url
+                results.add(result.url)
+        
+        for result in self.search_results:
+            self._search_archive.append(result)
             if all(domain not in result.url for domain in self.blacklist) and result.url not in results:
                 yield result.url
                 results.add(result.url)
