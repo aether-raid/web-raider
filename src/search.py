@@ -22,15 +22,15 @@ class GoogleSearch:
         results = set()
         
         for result in self._search_archive:
-            if all(domain not in result.url for domain in self.blacklist) and result.url not in results:
-                yield result.url
-                results.add(result.url)
+            # if all(domain not in result.url for domain in self.blacklist) and result.url not in results:
+            yield result.url
+            results.add(result.url)
         
         for result in self.search_results:
             self._search_archive.append(result)
-            if all(domain not in result.url for domain in self.blacklist) and result.url not in results:
-                yield result.url
-                results.add(result.url)
+            # if all(domain not in result.url for domain in self.blacklist) and result.url not in results:
+            yield result.url
+            results.add(result.url)
         
         
     def relevant_urls(self) -> Generator[str, None, None]:
