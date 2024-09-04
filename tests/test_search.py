@@ -27,21 +27,19 @@ class TestGoogleSearch(unittest.TestCase):
     
     def test_search_general(self):
         result = GoogleSearch(self.prompt)
+        result_copy = result.copy()
         
         results = set()
         for search_result in result.search_results:
             results.add(search_result.url)
             
-        result = GoogleSearch(self.prompt)
         
         num = 0
-        for url in result.urls():
+        for url in result_copy.urls():
             assert url in results
             num += 1
         
         assert num == len(results)
-        
-        
     
     def test_search_relevant(self):
         result = GoogleSearch(self.prompt)
