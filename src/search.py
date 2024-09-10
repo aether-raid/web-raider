@@ -10,13 +10,16 @@ class GoogleSearch:
     def __init__(self, query: str,
                  num_results: int = 20,
                  blacklist: list[str] = CODE_BLACKLIST):
+        self.query = query
+        self.cap = num_results
+        self.blacklist = blacklist
+    
+    def get_query(self):
         self.search_results = list(search(
-                query, num_results=num_results,
+                self.query, num_results=self.num_results,
                 advanced=True
             ))
-        self.cap = num_results
-        self.blacklist = blacklist       
-    
+
     def urls(self) -> Generator[str, None, None]:
         results = set()
         
