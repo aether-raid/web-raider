@@ -3,31 +3,19 @@
 from googlesearch import search, SearchResult
 from typing import Generator, Union
 
-from constants import CODE_BLACKLIST
+from src.constants import CODE_BLACKLIST
 
 
 class GoogleSearch:
-    def __init__(self, query: Union[str, list[SearchResult]],
+    def __init__(self, query: str,
                  num_results: int = 20,
                  blacklist: list[str] = CODE_BLACKLIST):
-        self.search_results: list[SearchResult]
-        if isinstance(query, str):
-            self.search_results = list(search(
+        self.search_results = list(search(
                 query, num_results=num_results,
                 advanced=True
             ))
-        else:
-            self.search_results = query.copy()[:num_results]
-        
         self.cap = num_results
-        self.blacklist = blacklist
-    
-    def copy(self):
-        # because google is dumb and can't handle temperature = 0
-        return GoogleSearch(self.search_results,
-                            num_results=self.cap,
-                            blacklist=self.blacklist)
-        
+        self.blacklist = blacklist       
     
     def urls(self) -> Generator[str, None, None]:
         results = set()
