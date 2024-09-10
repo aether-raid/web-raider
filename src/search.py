@@ -14,7 +14,7 @@ class GoogleSearch:
         self.cap = num_results
         self.blacklist = blacklist
     
-    def get_query(self):
+    def run_query(self) -> None:
         self.search_results = list(search(
                 self.query, num_results=self.num_results,
                 advanced=True
