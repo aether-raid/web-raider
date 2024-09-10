@@ -16,20 +16,15 @@ class GoogleSearch:
     
     def run_query(self) -> None:
         self.search_results = list(search(
-                self.query, num_results=self.num_results,
+                self.query, num_results=self.cap,
                 advanced=True
             ))
 
-    def urls(self) -> Generator[str, None, None]:
+    def get_relevant_urls(self) -> list[str]:
         results = set()
         
         for result in self.search_results:
-            if result.url not in results:
-                yield result.url
+            if result.url not in results and all(domain not in result.url for domain in self.blacklist):
                 results.add(result.url)
-        
-        
-    def relevant_urls(self) -> Generator[str, None, None]:
-        for url in self.urls():
-            if all(domain not in url for domain in self.blacklist):
-                yield url
+
+        return list(results)
