@@ -4,12 +4,45 @@ import base64
 from urllib.parse import urlparse, urlunparse
 
 class CodebaseType(str, Enum):
-    GITHUB = "github"
-    # GITLAB = "gitlab"
-    # BITBUCKET = "bitbucket"
-    
-def format_type(type: CodebaseType):
-    return type[0].upper()+type[1:3]+type[3].upper()+type[4:]
+    """
+    A class to define a set of codebase types by extending `Enum`.
+
+    Members
+    -------
+    GITHUB: str
+        represents GitHub
+    GITLAB: str
+        represents GitLab
+    BITBUCKET: str
+        represents BitBucket
+    SOURCEFORGE: str
+        represents SourceForge
+    GITEE: str
+        represents Gitee
+    """
+    GITHUB = "GitHub"
+    GITLAB = "GitLab"
+    BITBUCKET = "BitBucket"
+    SOURCEFORGE = "SourceForge"
+    GITEE = "Gitee"
+
+    @classmethod
+    def format_type(cls, codebase_type: 'CodebaseType') -> str:
+        """
+        Format the codebase type to a specific string representation.
+
+        Parameters
+        ----------
+        codebase_type : CodebaseType
+            The codebase type to format.
+
+        Returns
+        -------
+        str
+            The formatted string representation of the codebase type.
+        """
+        return codebase_type.value
+
 
 class Codebase:
     # def __new__(cls, url: str):
@@ -60,7 +93,7 @@ class Codebase:
         domain = parsed_url.netloc.lower()
         # path = parsed_url.path.lower()
 
-        if "github.com" in domain: # and "/blob/" not in path:
+        if "github.com" in domain and 'docs.github.com' not in domain: # and "/blob/" not in path:
             return True
         # elif "gitlab.com" in domain: # and "/blob/" not in path:
         #     return True
