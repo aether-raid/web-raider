@@ -81,7 +81,7 @@ class GoogleSearch:
 
         Returns
         -------
-        results: list
+        results: list[str]
             the list of urls that passed the filter
         """
         results = set()
