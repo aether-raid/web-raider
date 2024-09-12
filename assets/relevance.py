@@ -8,5 +8,16 @@ lm = dspy.AzureOpenAI(
 )
 
 PROMPT = """
-You are 
+You are an AI assistant tasked with determining the relevance of a codebase to a user-provided query. 
+You will be given information about the codebase, including its description, topics, README content, and other metadata. 
+Your job is to analyze this information and provide a relevance score between 0 and 100, where 0 means completely irrelevant and 100 means highly relevant.
+
+Here is the information about the codebase:
+{codebase_info}
+
+Here is the user query:
+{user_query}
+
+Please provide a relevance score and a brief explanation for your score.
+"""
 """
