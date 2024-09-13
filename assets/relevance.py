@@ -1,51 +1,71 @@
-import dspy
+# assets/relevance.py
 
-lm = dspy.AzureOpenAI(
-    api_base='https://raid-ses-openai.openai.azure.com/openai/deployments/gpt4o/chat/completions?api-version=2024-02-15-preview/',
-    api_version='2024-02-15-preview',
-    model='azure/gpt4o',
-    api_key='0e576c031e5446e19cc6d866ad3d9f3f'
+import json
+from textwrap import dedent
+from openai import AzureOpenAI
+from .prompts import Prompts
+
+# get the keys out
+keys = json.load(open('assets/keys.json', 'r'))
+
+endpoint = keys['api_base']
+key=keys['api_key']
+model_name=keys['model']
+
+client = AzureOpenAI(
+    azure_endpoint=endpoint,
+    api_version=keys['api_version'],
+    api_key=key
 )
 
-PROMPT = """
-You are an AI assistant tasked with determining the relevance of multiple codebases to a user-provided query. 
-You will be given information about each codebase, including its description, topics, README content, and other metadata. 
-Your job is to analyze this information and provide a relevance score between 0 and 100 for each codebase, where 0 means completely irrelevant and 100 means highly relevant.
+def call_relevance(codebases, query):
+    counter = 1
+    codebases_info = ''
 
-Rubric for Relevance Score:
-- 0-20: Irrelevant or very low relevance
-- 21-40: Low relevance
-- 41-60: Moderate relevance
-- 61-80: High relevance
-- 81-100: Very high relevance
+    for url, content in codebases.items():
+        codebases['index'] = counter - 1
+        codebases_info += f'Codebase {counter}\n\n'
+        codebases_info += f'URL: {url}\n\n'
+        codebases_info += f'Topics:\n{content["topics"]}\n\n'
+        codebases_info += f'README:\n{content["readme"]}\n\n'
+        # codebases_info += f'Description:\n{content["description"]}\n\n'
 
-Here is the information about the codebases:
-{codebases_info}
+        counter += 1
 
-Here is the user query:
-{user_query}
+    # response_format = json.dumps({
+    #     "json_schema": {
+    #         'name': 'codebase_relevance',
+    #         'description': 'to determine if a codebase is relevant to a user provided query',
+    #         "schema": {
+    #             "codebase_names": {
+    #                 "type": "array",
+    #                 "items": {"type": "string"}
+    #             },
+    #             "relevance": {
+    #                 "type": "array",
+    #                 "items": {"type": "boolean"}
+    #             }
+    #         },
+    #         'strict': True
+    #     },
+    #     "type": "json_schema"
+    # })
 
-Please provide a relevance score for each codebase, along with a brief explanation for your score. Additionally, provide a table comparing the pros and cons of each codebase.
+    relevance = client.chat.completions.create(
+        model=model_name,
+        messages = [
+            {
+                'role': 'system',
+                'content': dedent(Prompts.RELEVANCE_PROMPT)
+            },
+            {
+                'role': 'user',
+                'content': f'Codebase Information: {codebases_info}\n\nUser Query: {query}'
+            },
+        ],
+        temperature=0,
+        # response_format=response_format
+    )
 
-Example Table:
-| Codebase | Pros | Cons |
-|----------|------|------|
-| Codebase1 | - Pro1 \n - Pro2 | - Con1 \n - Con2 |
-| Codebase2 | - Pro1 \n - Pro2 | - Con1 \n - Con2 |
-"""
-
-def determine_relevance(codebases_info, user_query):
-    """
-    Determine the relevance of multiple codebases to a user-provided query using Azure GPT-4o.
-
-    Parameters:
-    - codebases_info (str): Information about the codebases.
-    - user_query (str): The user's query.
-
-    Returns:
-    - dict: A dictionary containing the relevance scores, explanations, and a comparison table.
-    """
-    prompt = PROMPT.format(codebases_info=codebases_info, user_query=user_query)
-    response = lm(prompt)
-    response = lm(prompt)
+    response = relevance.choices[0].message.content
     return response
