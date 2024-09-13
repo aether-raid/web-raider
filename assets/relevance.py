@@ -18,19 +18,21 @@ client = AzureOpenAI(
     api_key=key
 )
 
-def call_relevance(codebases, query):
-    counter = 1
+def consolidate_codebases_info(codebases):
+    """Helper function to help consolidateinformation about codebases"""
     codebases_info = ''
 
-    for url, content in codebases.items():
-        codebases['index'] = counter - 1
-        codebases_info += f'Codebase {counter}\n\n'
-        codebases_info += f'URL: {url}\n\n'
-        codebases_info += f'Topics:\n{content["topics"]}\n\n'
-        codebases_info += f'README:\n{content["readme"]}\n\n'
+    for i in range(len(codebases)):
+        codebases_info += f'Codebase {i + 1}\n\n'
+        codebases_info += f'URL: {codebases[i]["url"]}\n\n'
+        codebases_info += f'Topics:\n{codebases[i]["info"]["topics"]}\n\n'
+        codebases_info += f'README:\n{codebases[i]["info"]["readme"]}\n\n'
         # codebases_info += f'Description:\n{content["description"]}\n\n'
 
-        counter += 1
+    return codebases_info
+
+def call_relevance(codebases, query):
+    codebases_info = consolidate_codebases_info(codebases)
 
     # response_format = json.dumps({
     #     "json_schema": {
@@ -68,4 +70,47 @@ def call_relevance(codebases, query):
     )
 
     response = relevance.choices[0].message.content
+    return response
+
+def call_pro_con(codebases, query):
+    codebases_info = consolidate_codebases_info(codebases)
+
+    pro_con = client.chat.completions.create(
+        model=model_name,
+        messages = [
+            {
+                'role': 'system',
+                'content': dedent(Prompts.PRO_CON_PROMPT)
+            },
+            {
+                'role': 'user',
+                'content': f'Codebase Information: {codebases_info}\n\nUser Query: {query}'
+            },
+        ],
+        temperature=0,
+        # response_format=response_format
+    )
+
+    response = pro_con.choices[0].message.content
+    return response
+
+def call_scorer(codebases, query, pro_con):
+    codebases_info = consolidate_codebases_info(codebases)
+
+    scorer = client.chat.completions.create(
+        model=model_name,
+        messages = [
+            {
+                'role': 'system',
+                'content': dedent(Prompts.SCORER_PROMPT)
+            },
+            {
+                'role': 'user',
+                'content': f'Codebase Information: {codebases_info}\n\nUser Query: {query}\n\nPro/Con Information: {pro_con}'
+            },
+        ],
+        temperature=0,
+    )
+
+    response = scorer.choices[0].message.content
     return response
