@@ -121,6 +121,14 @@ class Codebase:
         
     def __init__(self, url: str):
         """
+        Initializes the GitHubCodebase instance with the given URL.
+
+        Parameters
+        ----------
+        url : str
+            The URL of the GitHub repository.
+        """
+        """
         Initializes the Codebase instance with the given URL.
 
         Parameters
@@ -218,6 +226,14 @@ class GitHubCodebase(Codebase):
             raise ValueError("This is not a GitHub codebase")
         
     def check_is_repo(self) -> bool:
+        """
+        Checks if the URL is a GitHub repository URL.
+
+        Returns
+        -------
+        bool
+            True if the URL is a GitHub repository URL, False otherwise.
+        """
         # Regular expression patterns for profile and repository
         profile_pattern = r'^https://github\.com/[^/]+$'
         repo_pattern = r'^https://github\.com/[^/]+/[^/]+$'
@@ -230,6 +246,14 @@ class GitHubCodebase(Codebase):
             return False
 
     def get_id(self):
+        """
+        Extracts the owner and repository name from the GitHub repository URL.
+
+        Returns
+        -------
+        tuple
+            A tuple containing the owner and repository name.
+        """
         # Extract owner and repo from the repository URL
         # path_parts = urlparse(self.repository_url).path.split('/')
         path_parts = urlparse(self.original_url).path.split('/')
@@ -238,6 +262,14 @@ class GitHubCodebase(Codebase):
         return owner, repo
     
     def get_topics(self):
+        """
+        Fetches the topics of the GitHub repository.
+
+        Returns
+        -------
+        list
+            A list of topics associated with the GitHub repository.
+        """
         # Extract owner and repo from the repository URL
         owner, repo = self.get_id()
 
@@ -258,6 +290,14 @@ class GitHubCodebase(Codebase):
             return []
         
     def get_readme(self):
+        """
+        Fetches the README content of the GitHub repository.
+
+        Returns
+        -------
+        str
+            The decoded content of the README file.
+        """
         # Extract owner and repo from the repository URL
         owner, repo = self.get_id()
 
@@ -277,6 +317,14 @@ class GitHubCodebase(Codebase):
             return None
 
     def get_repo_desc(self):
+        """
+        Fetches the description of the GitHub repository.
+
+        Returns
+        -------
+        str
+            The description of the GitHub repository.
+        """
         # Extract owner and repo from the repository URL
         owner, repo = self.get_id()
         
@@ -293,6 +341,14 @@ class GitHubCodebase(Codebase):
             return None
         
     def combine_info(self):
+        """
+        Combines the topics, README content, and description of the GitHub repository into a dictionary.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the topics, README content, and description of the GitHub repository.
+        """
         # if correct type
         if self.check_is_repo():
             topics = self.get_topics() if not None else []  # Default to an empty list if None
