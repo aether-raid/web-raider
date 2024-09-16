@@ -130,30 +130,19 @@ class Codebase:
         self.original_url = url
         parsed_url = urlparse(url)
         domain = parsed_url.netloc.lower()
-        path = parsed_url.path.lower()
 
         if "github.com" in domain:
             self.type = CodebaseType.GITHUB
-            path_parts = path.split('/')[:3]  # Keep only username and repo name
         elif "gitlab.com" in domain:
             self.type = CodebaseType.GITLAB
-            path_parts = path.split('/')[:3]  # Keep only username and repo name
         elif "bitbucket.org" in domain:
             self.type = CodebaseType.BITBUCKET
-            path_parts = path.split('/')[:3]  # Keep only username and repo name
         elif "sourceforge.net" in domain:
             self.type = CodebaseType.SOURCEFORGE
-            path_parts = path.split('/')[:3]  # Keep only username and repo name
         elif "gitee.com" in domain:
             self.type = CodebaseType.GITEE
-            path_parts = path.split('/')[:3]  # Keep only username and repo name
         else:
             raise ValueError("Unsupported codebase type")
-
-        # Reconstruct the URL with only the repository part
-        truncated_path = '/'.join(path_parts)
-        truncated_parsed_url = parsed_url._replace(path=truncated_path, query='', fragment='')
-        self.repository_url = urlunparse(truncated_parsed_url)
     
     def __str__(self):
         """
