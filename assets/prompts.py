@@ -45,6 +45,8 @@ class Prompts(str, Enum):
     Your job is to analyze this information and state whether the codebase is relevant or not.
 
     Output a list of boolean values (True or False) in sequential order of codebases, with each response on one line.
+
+    Do NOT provide more than one boolean value for each codebase.
     """
 
     SCORER_PROMPT = """
