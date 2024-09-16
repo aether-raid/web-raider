@@ -239,9 +239,9 @@ class GitHubCodebase(Codebase):
         profile_pattern = r'^https://github\.com/[^/]+$'
         repo_pattern = r'^https://github\.com/[^/]+/[^/]+$'
         
-        if re.match(profile_pattern, self.original_url):
+        if re.match(profile_pattern, self.repository_url):
             return False
-        elif re.match(repo_pattern, self.original_url):
+        elif re.match(repo_pattern, self.repository_url):
             return True
         else:
             return False
@@ -256,8 +256,7 @@ class GitHubCodebase(Codebase):
             A tuple containing the owner and repository name.
         """
         # Extract owner and repo from the repository URL
-        # path_parts = urlparse(self.repository_url).path.split('/')
-        path_parts = urlparse(self.original_url).path.split('/')
+        path_parts = urlparse(self.repository_url).path.split('/')
         owner, repo = path_parts[1], path_parts[2]
         
         return owner, repo
@@ -385,10 +384,10 @@ class GitLabCodebase(Codebase):
         profile_pattern = r'^https://gitlab\.com/[^/]+$'
         repo_pattern = r'^https://gitlab\.com/[^/]+/[^/]+$'
 
-        if re.match(profile_pattern, self.original_url):
+        if re.match(profile_pattern, self.repository_url):
             return False
         
-        elif re.match(repo_pattern, self.original_url):
+        elif re.match(repo_pattern, self.repository_url):
             return True
         else:
             return False
@@ -402,7 +401,7 @@ class GitLabCodebase(Codebase):
         tuple
             A tuple containing the owner and repository name.
         """
-        path_parts = urlparse(self.original_url).path.split('/')
+        path_parts = urlparse(self.repository_url).path.split('/')
         owner, repo = path_parts[1], path_parts[2]
         
         return owner, repo
@@ -516,9 +515,12 @@ class BitBucketCodebase(Codebase):
         bool
             True if the URL is a BitBucket repository URL, False otherwise.
         """
+        profile_pattern = r'^https://bitbucket\.org/[^/]+/workspace$'
         repo_pattern = r'^https://bitbucket\.org/[^/]+/[^/]+$'
         
-        if re.match(repo_pattern, self.original_url):
+        if re.match(profile_pattern, self.repository_url):
+            return False
+        elif re.match(repo_pattern, self.repository_url):
             return True
         else:
             return False
@@ -532,7 +534,7 @@ class BitBucketCodebase(Codebase):
         tuple
             A tuple containing the owner and repository name.
         """
-        path_parts = urlparse(self.original_url).path.split('/')
+        path_parts = urlparse(self.repository_url).path.split('/')
         owner, repo = path_parts[1], path_parts[2]
         
         return owner, repo
@@ -636,7 +638,7 @@ class SourceForgeCodebase(Codebase):
         """
         repo_pattern = r'^https://sourceforge\.net/projects/[^/]+$'
         
-        if re.match(repo_pattern, self.original_url):
+        if re.match(repo_pattern, self.repository_url):
             return True
         else:
             return False
@@ -650,7 +652,7 @@ class SourceForgeCodebase(Codebase):
         str
             The project name.
         """
-        path_parts = urlparse(self.original_url).path.split('/')
+        path_parts = urlparse(self.repository_url).path.split('/')
         project = path_parts[2]
         
         return project
@@ -754,7 +756,7 @@ class GiteeCodebase(Codebase):
         """
         repo_pattern = r'^https://gitee\.com/[^/]+/[^/]+$'
         
-        if re.match(repo_pattern, self.original_url):
+        if re.match(repo_pattern, self.repository_url):
             return True
         else:
             return False
@@ -768,7 +770,7 @@ class GiteeCodebase(Codebase):
         tuple
             A tuple containing the owner and repository name.
         """
-        path_parts = urlparse(self.original_url).path.split('/')
+        path_parts = urlparse(self.repository_url).path.split('/')
         owner, repo = path_parts[1], path_parts[2]
         
         return owner, repo
