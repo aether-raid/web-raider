@@ -314,7 +314,7 @@ class GitHubCodebase(Codebase):
             return decoded_content
         else:
             print(f"Error fetching README: {response.status_code}")
-            return None
+            return ''
 
     def get_repo_desc(self):
         """
@@ -338,7 +338,7 @@ class GitHubCodebase(Codebase):
             return response.json()["description"]
         else:
             print(f"Error fetching repo description: {response.status_code}")
-            return None
+            return ''
         
     def combine_info(self):
         """
@@ -351,9 +351,9 @@ class GitHubCodebase(Codebase):
         """
         # if correct type
         if self.check_is_repo():
-            topics = self.get_topics() if not None else []  # Default to an empty list if None
-            readme = self.get_readme() if not None else ''  # Default to an empty string if None
-            desc = self.get_repo_desc() if not None else '' # Default to an empty string if None
+            topics = self.get_topics()
+            readme = self.get_readme()
+            desc = self.get_repo_desc()
             
             info_dict = {
                 'topics': topics,
