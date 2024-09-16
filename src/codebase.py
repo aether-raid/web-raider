@@ -2,6 +2,7 @@ from enum import Enum
 import os
 import requests
 import base64
+import re
 from urllib.parse import urlparse, urlunparse
 from assets.key_import import GITHUB_TOKEN
 
@@ -130,19 +131,30 @@ class Codebase:
         self.original_url = url
         parsed_url = urlparse(url)
         domain = parsed_url.netloc.lower()
+        path = parsed_url.path.lower()
 
         if "github.com" in domain:
             self.type = CodebaseType.GITHUB
+            path_parts = path.split('/')[:3]  # Keep only username and repo name
         elif "gitlab.com" in domain:
             self.type = CodebaseType.GITLAB
+            path_parts = path.split('/')[:3]  # Keep only username and repo name
         elif "bitbucket.org" in domain:
             self.type = CodebaseType.BITBUCKET
+            path_parts = path.split('/')[:3]  # Keep only username and repo name
         elif "sourceforge.net" in domain:
             self.type = CodebaseType.SOURCEFORGE
+            path_parts = path.split('/')[:3]  # Keep only username and repo name
         elif "gitee.com" in domain:
             self.type = CodebaseType.GITEE
+            path_parts = path.split('/')[:3]  # Keep only username and repo name
         else:
             raise ValueError("Unsupported codebase type")
+        
+        # Reconstruct the URL with only the repository part
+        truncated_path = '/'.join(path_parts)
+        truncated_parsed_url = parsed_url._replace(path=truncated_path, query='', fragment='')
+        self.repository_url = urlunparse(truncated_parsed_url)
     
     def __str__(self):
         """
@@ -153,7 +165,7 @@ class Codebase:
         str
             A string representation of the Codebase instance.
         """
-        return f'{CodebaseType.format_type(self.type)} Codebase({self.repository_url})'
+        return f'{CodebaseType.format_type(self.type)} Codebase({self.original_url})'
     
     def __repr__(self):
         """
@@ -183,23 +195,39 @@ class Codebase:
         """
         parsed_url = urlparse(url)
         domain = parsed_url.netloc.lower()
-        # path = parsed_url.path.lower()
+        path = parsed_url.path.lower()
 
-        if "github.com" in domain and 'docs.github.com' not in domain: # and "/blob/" not in path:
+        if "github.com" in domain and 'docs.github.com' not in domain:
             return True
-        # elif "gitlab.com" in domain: # and "/blob/" not in path:
-        #     return True
-        # elif "bitbucket.org" in domain and "/src/" not in path:
-        #     return True
+        elif "gitlab.com" in domain and "/-/blob/" not in path:
+            return True
+        elif "bitbucket.org" in domain and "/src/" not in path:
+            return True
+        elif "sourceforge.net" in domain and "/projects/" in path:
+            return True
+        elif "gitee.com" in domain and "/blob/" not in path:
+            return True
         else:
             return False
 
 
 class GitHubCodebase(Codebase):
-    def __init__(self, url):
+    def __init__(self, url: str):
         super().__init__(url)
         if self.type != CodebaseType.GITHUB:
             raise ValueError("This is not a GitHub codebase")
+        
+    def check_is_repo(self) -> bool:
+        # Regular expression patterns for profile and repository
+        profile_pattern = r'^https://github\.com/[^/]+$'
+        repo_pattern = r'^https://github\.com/[^/]+/[^/]+$'
+        
+        if re.match(profile_pattern, self.original_url):
+            return False
+        elif re.match(repo_pattern, self.original_url):
+            return True
+        else:
+            return False
 
     def get_id(self):
         # Extract owner and repo from the repository URL
@@ -265,18 +293,22 @@ class GitHubCodebase(Codebase):
             return None
         
     def combine_info(self):
-        topics = self.get_topics() if not None else []  # Default to an empty list if None
-        readme = self.get_readme() if not None else ''  # Default to an empty string if None
-        # desc = self.get_repo_desc() if not None else '' # Default to an empty string if None
+        # if correct type
+        if self.check_is_repo():
+            topics = self.get_topics() if not None else []  # Default to an empty list if None
+            readme = self.get_readme() if not None else ''  # Default to an empty string if None
+            # desc = self.get_repo_desc() if not None else '' # Default to an empty string if None
+            
+            info_dict = {
+                'topics': topics,
+                'readme': readme,
+                # 'description': desc
+            }
+
+            return info_dict
         
-        info_dict = {
-            'topics': topics,
-            'readme': readme,
-            # 'description': desc
-        }
-
-        return info_dict
-
+        else:
+            return None
 
 class GitLabCodebase(Codebase):
     def __init__(self, url):
