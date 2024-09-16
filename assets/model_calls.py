@@ -4,22 +4,36 @@ import json
 from textwrap import dedent
 from openai import AzureOpenAI
 from .prompts import Prompts
-
-# get the keys out
-keys = json.load(open('assets/keys.json', 'r'))
-
-endpoint = keys['api_base']
-key=keys['api_key']
-model_name=keys['model']
+from .key_import import AZURE_ENDPOINT, AZURE_KEY, AZURE_MODEL, AZURE_API_VERSION
 
 client = AzureOpenAI(
-    azure_endpoint=endpoint,
-    api_version=keys['api_version'],
-    api_key=key
+    azure_endpoint=AZURE_ENDPOINT,
+    api_version=AZURE_API_VERSION,
+    api_key=AZURE_KEY
 )
 
+def call_query_simplifier(query):
+    simplifier = client.chat.completions.create(
+        model=AZURE_MODEL,
+        messages = [
+            {
+                'role': 'system',
+                'content': dedent(Prompts.QUERY_PROMPT)
+            },
+            {
+                'role': 'user',
+                'content': query
+            },
+        ],
+        temperature=0,
+        # response_format=response_format
+    )
+
+    response = simplifier.choices[0].message.content
+    return response
+
 def consolidate_codebases_info(codebases):
-    """Helper function to help consolidateinformation about codebases"""
+    """Helper function to help consolidate information about codebases"""
     codebases_info = ''
 
     for i in range(len(codebases)):
@@ -54,7 +68,7 @@ def call_relevance(codebases, query):
     # })
 
     relevance = client.chat.completions.create(
-        model=model_name,
+        model=AZURE_MODEL,
         messages = [
             {
                 'role': 'system',
@@ -76,7 +90,7 @@ def call_pro_con(codebases, query):
     codebases_info = consolidate_codebases_info(codebases)
 
     pro_con = client.chat.completions.create(
-        model=model_name,
+        model=AZURE_MODEL,
         messages = [
             {
                 'role': 'system',
@@ -98,7 +112,7 @@ def call_scorer(codebases, query, pro_con):
     codebases_info = consolidate_codebases_info(codebases)
 
     scorer = client.chat.completions.create(
-        model=model_name,
+        model=AZURE_MODEL,
         messages = [
             {
                 'role': 'system',
