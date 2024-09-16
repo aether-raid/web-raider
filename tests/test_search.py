@@ -2,7 +2,7 @@
 
 import unittest
 
-from search import GoogleSearch
+from src.search import GoogleSearch
 
 
 PROMPT = "How to implement a React Codebase?"
