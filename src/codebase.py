@@ -3,6 +3,7 @@ import os
 import requests
 import base64
 import re
+from typing import Union
 from urllib.parse import urlparse, urlunparse
 from assets.key_import import GITHUB_TOKEN
 
@@ -89,7 +90,7 @@ class Codebase:
     is_code(url: str) -> bool
         Determines if the given URL is a code repository URL.
     """
-    def __new__(cls, url: str):
+    def __new__(cls, url: str) -> 'Codebase':
         """
         Determines the type of codebase based on the domain and returns an instance of the corresponding subclass.
 
@@ -119,7 +120,7 @@ class Codebase:
         else:
             raise ValueError("Unsupported codebase type")
         
-    def __init__(self, url: str):
+    def __init__(self, url: str) -> None:
         """
         Initializes the GitHubCodebase instance with the given URL.
 
@@ -164,7 +165,7 @@ class Codebase:
         truncated_parsed_url = parsed_url._replace(path=truncated_path, query='', fragment='')
         self.repository_url = urlunparse(truncated_parsed_url)
     
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Returns a string representation of the Codebase instance.
 
@@ -175,7 +176,7 @@ class Codebase:
         """
         return f'{CodebaseType.format_type(self.type)} Codebase({self.original_url})'
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Returns a string representation of the Codebase instance.
 
@@ -220,7 +221,7 @@ class Codebase:
 
 
 class GitHubCodebase(Codebase):
-    def __init__(self, url: str):
+    def __init__(self, url: str) -> None:
         super().__init__(url)
         if self.type != CodebaseType.GITHUB:
             raise ValueError("This is not a GitHub codebase")
@@ -245,7 +246,7 @@ class GitHubCodebase(Codebase):
         else:
             return False
 
-    def get_id(self):
+    def get_id(self) -> tuple[str, str]:
         """
         Extracts the owner and repository name from the GitHub repository URL.
 
@@ -261,7 +262,7 @@ class GitHubCodebase(Codebase):
         
         return owner, repo
     
-    def get_topics(self):
+    def get_topics(self) -> list:
         """
         Fetches the topics of the GitHub repository.
 
@@ -289,7 +290,7 @@ class GitHubCodebase(Codebase):
             print(f"Error fetching topics: {response.status_code}")
             return []
         
-    def get_readme(self):
+    def get_readme(self) -> str:
         """
         Fetches the README content of the GitHub repository.
 
@@ -316,7 +317,7 @@ class GitHubCodebase(Codebase):
             print(f"Error fetching README: {response.status_code}")
             return ''
 
-    def get_repo_desc(self):
+    def get_repo_desc(self) -> str:
         """
         Fetches the description of the GitHub repository.
 
@@ -340,7 +341,7 @@ class GitHubCodebase(Codebase):
             print(f"Error fetching repo description: {response.status_code}")
             return ''
         
-    def combine_info(self):
+    def combine_info(self) -> Union[dict, None]:
         """
         Combines the topics, README content, and description of the GitHub repository into a dictionary.
 
@@ -367,25 +368,494 @@ class GitHubCodebase(Codebase):
             return None
 
 class GitLabCodebase(Codebase):
-    def __init__(self, url):
+    def __init__(self, url: str) -> None:
         super().__init__(url)
         if self.type != CodebaseType.GITLAB:
             raise ValueError("This is not a GitLab codebase")
+        
+    def check_is_repo(self) -> bool:
+        """
+        Checks if the URL is a GitLab repository URL.
+
+        Returns
+        -------
+        bool
+            True if the URL is a GitLab repository URL, False otherwise.
+        """
+        profile_pattern = r'^https://gitlab\.com/[^/]+$'
+        repo_pattern = r'^https://gitlab\.com/[^/]+/[^/]+$'
+
+        if re.match(profile_pattern, self.original_url):
+            return False
+        
+        elif re.match(repo_pattern, self.original_url):
+            return True
+        else:
+            return False
+
+    def get_id(self) -> tuple[str, str]:
+        """
+        Extracts the owner and repository name from the GitLab repository URL.
+
+        Returns
+        -------
+        tuple
+            A tuple containing the owner and repository name.
+        """
+        path_parts = urlparse(self.original_url).path.split('/')
+        owner, repo = path_parts[1], path_parts[2]
+        
+        return owner, repo
+    
+    def get_topics(self) -> list:
+        """
+        Fetches the topics of the GitLab repository.
+
+        Returns
+        -------
+        list
+            A list of topics associated with the GitLab repository.
+        """
+        owner, repo = self.get_id()
+        api_url = f"https://gitlab.com/api/v4/projects/{owner}%2F{repo}"
+        # headers = {"PRIVATE-TOKEN": "YOUR_GITLAB_API_KEY"}
+        response = requests.get(
+            api_url,
+            # headers=headers
+        )
+
+        if response.status_code == 200:
+            return response.json().get("tag_list", [])
+        else:
+            print(f"Error fetching topics: {response.status_code}")
+            return []
+        
+    def get_readme(self) -> str:
+        """
+        Fetches the README content of the GitLab repository.
+
+        Returns
+        -------
+        str
+            The decoded content of the README file.
+        """
+        owner, repo = self.get_id()
+        api_url = f"https://gitlab.com/api/v4/projects/{owner}%2F{repo}/repository/files/README.md/raw"
+        # headers = {"PRIVATE-TOKEN": "YOUR_GITLAB_API_KEY"}
+        response = requests.get(
+            api_url,
+            # headers=headers
+        )
+
+        if response.status_code == 200:
+            return response.text
+        else:
+            print(f"Error fetching README: {response.status_code}")
+            return ''
+
+    def get_repo_desc(self) -> str:
+        """
+        Fetches the description of the GitLab repository.
+
+        Returns
+        -------
+        str
+            The description of the GitLab repository.
+        """
+        owner, repo = self.get_id()
+        api_url = f"https://gitlab.com/api/v4/projects/{owner}%2F{repo}"
+        # headers = {"PRIVATE-TOKEN": "YOUR_GITLAB_API_KEY"}
+        response = requests.get(
+            api_url,
+            # headers=headers
+        )
+
+        if response.status_code == 200:
+            return response.json().get("description", "")
+        else:
+            print(f"Error fetching repo description: {response.status_code}")
+            return ''
+        
+    def combine_info(self) -> Union[dict, None]:
+        """
+        Combines the topics, README content, and description of the GitLab repository into a dictionary.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the topics, README content, and description of the GitLab repository.
+        """
+        if self.check_is_repo():
+            topics = self.get_topics()
+            readme = self.get_readme()
+            desc = self.get_repo_desc()
+            
+            info_dict = {
+                'topics': topics,
+                'readme': readme,
+                'description': desc
+            }
+
+            return info_dict
+        
+        else:
+            return None
 
 class BitBucketCodebase(Codebase):
-    def __init__(self, url):
+    def __init__(self, url: str) -> None:
         super().__init__(url)
         if self.type != CodebaseType.BITBUCKET:
             raise ValueError("This is not a BitBucket codebase")
+        
+    def check_is_repo(self) -> bool:
+        """
+        Checks if the URL is a BitBucket repository URL.
+
+        Returns
+        -------
+        bool
+            True if the URL is a BitBucket repository URL, False otherwise.
+        """
+        repo_pattern = r'^https://bitbucket\.org/[^/]+/[^/]+$'
+        
+        if re.match(repo_pattern, self.original_url):
+            return True
+        else:
+            return False
+
+    def get_id(self) -> tuple[str, str]:
+        """
+        Extracts the owner and repository name from the BitBucket repository URL.
+
+        Returns
+        -------
+        tuple
+            A tuple containing the owner and repository name.
+        """
+        path_parts = urlparse(self.original_url).path.split('/')
+        owner, repo = path_parts[1], path_parts[2]
+        
+        return owner, repo
+    
+    def get_topics(self) -> list:
+        """
+        Fetches the topics of the BitBucket repository.
+
+        Returns
+        -------
+        list
+            A list of topics associated with the BitBucket repository.
+        """
+        owner, repo = self.get_id()
+        api_url = f"https://api.bitbucket.org/2.0/repositories/{owner}/{repo}"
+        response = requests.get(api_url)
+
+        if response.status_code == 200:
+            return response.json().get("tags", [])
+        else:
+            print(f"Error fetching topics: {response.status_code}")
+            return []
+        
+    def get_readme(self) -> str:
+        """
+        Fetches the README content of the BitBucket repository.
+
+        Returns
+        -------
+        str
+            The decoded content of the README file.
+        """
+        owner, repo = self.get_id()
+        api_url = f"https://api.bitbucket.org/2.0/repositories/{owner}/{repo}/src/master/README.md"
+        response = requests.get(api_url)
+
+        if response.status_code == 200:
+            return response.text
+        else:
+            print(f"Error fetching README: {response.status_code}")
+            return ''
+
+    def get_repo_desc(self) -> str:
+        """
+        Fetches the description of the BitBucket repository.
+
+        Returns
+        -------
+        str
+            The description of the BitBucket repository.
+        """
+        owner, repo = self.get_id()
+        api_url = f"https://api.bitbucket.org/2.0/repositories/{owner}/{repo}"
+        response = requests.get(api_url)
+
+        if response.status_code == 200:
+            return response.json().get("description", "")
+        else:
+            print(f"Error fetching repo description: {response.status_code}")
+            return ''
+        
+    def combine_info(self) -> Union[dict, None]:
+        """
+        Combines the topics, README content, and description of the BitBucket repository into a dictionary.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the topics, README content, and description of the BitBucket repository.
+        """
+        if self.check_is_repo():
+            topics = self.get_topics()
+            readme = self.get_readme()
+            desc = self.get_repo_desc()
+            
+            info_dict = {
+                'topics': topics,
+                'readme': readme,
+                'description': desc
+            }
+
+            return info_dict
+        
+        else:
+            return None
 
 class SourceForgeCodebase(Codebase):
-    def __init__(self, url):
+    def __init__(self, url: str) -> None:
         super().__init__(url)
         if self.type != CodebaseType.SOURCEFORGE:
             raise ValueError("This is not a SourceForge codebase")
+        
+    def check_is_repo(self) -> bool:
+        """
+        Checks if the URL is a SourceForge repository URL.
+
+        Returns
+        -------
+        bool
+            True if the URL is a SourceForge repository URL, False otherwise.
+        """
+        repo_pattern = r'^https://sourceforge\.net/projects/[^/]+$'
+        
+        if re.match(repo_pattern, self.original_url):
+            return True
+        else:
+            return False
+
+    def get_id(self) -> tuple[str, str]:
+        """
+        Extracts the project name from the SourceForge repository URL.
+
+        Returns
+        -------
+        str
+            The project name.
+        """
+        path_parts = urlparse(self.original_url).path.split('/')
+        project = path_parts[2]
+        
+        return project
+    
+    def get_topics(self) -> list:
+        """
+        Fetches the topics of the SourceForge repository.
+
+        Returns
+        -------
+        list
+            A list of topics associated with the SourceForge repository.
+        """
+        project = self.get_id()
+        api_url = f"https://sourceforge.net/rest/p/{project}"
+        response = requests.get(api_url)
+
+        if response.status_code == 200:
+            return response.json().get("tags", [])
+        else:
+            print(f"Error fetching topics: {response.status_code}")
+            return []
+        
+    def get_readme(self) -> str:
+        """
+        Fetches the README content of the SourceForge repository.
+
+        Returns
+        -------
+        str
+            The decoded content of the README file.
+        """
+        project = self.get_id()
+        api_url = f"https://sourceforge.net/projects/{project}/files/README.md/download"
+        response = requests.get(api_url)
+
+        if response.status_code == 200:
+            return response.text
+        else:
+            print(f"Error fetching README: {response.status_code}")
+            return ''
+
+    def get_repo_desc(self) -> str:
+        """
+        Fetches the description of the SourceForge repository.
+
+        Returns
+        -------
+        str
+            The description of the SourceForge repository.
+        """
+        project = self.get_id()
+        api_url = f"https://sourceforge.net/rest/p/{project}"
+        response = requests.get(api_url)
+
+        if response.status_code == 200:
+            return response.json().get("short_description", "")
+        else:
+            print(f"Error fetching repo description: {response.status_code}")
+            return ''
+        
+    def combine_info(self) -> Union[dict, None]:
+        """
+        Combines the topics, README content, and description of the SourceForge repository into a dictionary.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the topics, README content, and description of the SourceForge repository.
+        """
+        if self.check_is_repo():
+            topics = self.get_topics()
+            readme = self.get_readme()
+            desc = self.get_repo_desc()
+            
+            info_dict = {
+                'topics': topics,
+                'readme': readme,
+                'description': desc
+            }
+
+            return info_dict
+        
+        else:
+            return None
 
 class GiteeCodebase(Codebase):
     def __init__(self, url):
         super().__init__(url)
         if self.type != CodebaseType.GITEE:
             raise ValueError("This is not a Gitee codebase")
+        
+    def check_is_repo(self) -> bool:
+        """
+        Checks if the URL is a Gitee repository URL.
+
+        Returns
+        -------
+        bool
+            True if the URL is a Gitee repository URL, False otherwise.
+        """
+        repo_pattern = r'^https://gitee\.com/[^/]+/[^/]+$'
+        
+        if re.match(repo_pattern, self.original_url):
+            return True
+        else:
+            return False
+
+    def get_id(self) -> tuple[str, str]:
+        """
+        Extracts the owner and repository name from the Gitee repository URL.
+
+        Returns
+        -------
+        tuple
+            A tuple containing the owner and repository name.
+        """
+        path_parts = urlparse(self.original_url).path.split('/')
+        owner, repo = path_parts[1], path_parts[2]
+        
+        return owner, repo
+    
+    def get_topics(self) -> str:
+        """
+        Fetches the topics of the Gitee repository.
+
+        Returns
+        -------
+        list
+            A list of topics associated with the Gitee repository.
+        """
+        owner, repo = self.get_id()
+        api_url = f"https://gitee.com/api/v5/repos/{owner}/{repo}/topics"
+        headers = {"Authorization": "YOUR_GITEE_API_KEY"}
+        response = requests.get(api_url, headers=headers)
+
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"Error fetching topics: {response.status_code}")
+            return []
+        
+    def get_readme(self) -> str:
+        """
+        Fetches the README content of the Gitee repository.
+
+        Returns
+        -------
+        str
+            The decoded content of the README file.
+        """
+        owner, repo = self.get_id()
+        api_url = f"https://gitee.com/api/v5/repos/{owner}/{repo}/readme"
+        headers = {"Authorization": "YOUR_GITEE_API_KEY"}
+        response = requests.get(api_url, headers=headers)
+
+        if response.status_code == 200:
+            content = response.json()["content"]
+            decoded_content = base64.b64decode(content).decode('utf-8')
+            return decoded_content
+        else:
+            print(f"Error fetching README: {response.status_code}")
+            return ''
+
+    def get_repo_desc(self) -> str:
+        """
+        Fetches the description of the Gitee repository.
+
+        Returns
+        -------
+        str
+            The description of the Gitee repository.
+        """
+        owner, repo = self.get_id()
+        api_url = f"https://gitee.com/api/v5/repos/{owner}/{repo}"
+        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+        response = requests.get(api_url, headers=headers)
+
+        if response.status_code == 200:
+            return response.json().get("description", "")
+        else:
+            print(f"Error fetching repo description: {response.status_code}")
+            return ''
+        
+    def combine_info(self) -> Union[dict, None]:
+        """
+        Combines the topics, README content, and description of the Gitee repository into a dictionary.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the topics, README content, and description of the Gitee repository.
+        """
+        if self.check_is_repo():
+            topics = self.get_topics()
+            readme = self.get_readme()
+            desc = self.get_repo_desc()
+            
+            info_dict = {
+                'topics': topics,
+                'readme': readme,
+                'description': desc
+            }
+
+            return info_dict
+        
+        else:
+            return None
