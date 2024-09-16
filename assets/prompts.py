@@ -25,12 +25,18 @@ class Prompts(str, Enum):
     
     If the query is too complex, break the query down into smaller sub-queries. You may come up with up to 3 relevant prompts that can result in relevant codebases through a Google search.
 
-    Output Format:
-    --------------
+    Do NOT output anything other than the json object.
 
-    1. <First Prompt>
-    2. <Second Prompt>
-    3. <Third Prompt>
+    Output Format
+    -------------
+
+    {
+        "prompts": [
+            "<First Prompt>",
+            "<Second Prompt>",
+            "<Third Prompt>"
+        ]
+    }
     """
 
     RELEVANCE_PROMPT = """
