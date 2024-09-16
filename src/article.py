@@ -3,7 +3,7 @@
 from newspaper import Article
 from typing import Generator
 
-from codebase import Codebase
+from src.codebase import Codebase
 
 
 # CODE_DOMAINS =  [
