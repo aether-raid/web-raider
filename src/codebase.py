@@ -27,7 +27,7 @@ class CodebaseType(str, Enum):
     GITHUB = "GitHub"
     GITLAB = "GitLab"
     BITBUCKET = "BitBucket"
-    SOURCEFORGE = "SourceForge"
+    # SOURCEFORGE = "SourceForge"
     GITEE = "Gitee"
 
     @classmethod
@@ -113,8 +113,8 @@ class Codebase:
             return super(Codebase, GitLabCodebase).__new__(GitLabCodebase)
         elif "bitbucket.org" in domain:
             return super(Codebase, BitBucketCodebase).__new__(BitBucketCodebase)
-        elif "sourceforge.net" in domain:
-            return super(Codebase, SourceForgeCodebase).__new__(SourceForgeCodebase)
+        # elif "sourceforge.net" in domain:
+        #     return super(Codebase, SourceForgeCodebase).__new__(SourceForgeCodebase)
         elif "gitee.com" in domain:
             return super(Codebase, GiteeCodebase).__new__(GiteeCodebase)
         else:
@@ -151,9 +151,9 @@ class Codebase:
         elif "bitbucket.org" in domain:
             self.type = CodebaseType.BITBUCKET
             path_parts = path.split('/')[:3]  # Keep only username and repo name
-        elif "sourceforge.net" in domain:
-            self.type = CodebaseType.SOURCEFORGE
-            path_parts = path.split('/')[:3]  # Keep only username and repo name
+        # elif "sourceforge.net" in domain:
+        #     self.type = CodebaseType.SOURCEFORGE
+        #     path_parts = path.split('/')[:3]  # Keep only username and repo name
         elif "gitee.com" in domain:
             self.type = CodebaseType.GITEE
             path_parts = path.split('/')[:3]  # Keep only username and repo name
@@ -212,8 +212,8 @@ class Codebase:
             return True
         elif "bitbucket.org" in domain and "/src/" not in path:
             return True
-        elif "sourceforge.net" in domain and "/projects/" in path:
-            return True
+        # elif "sourceforge.net" in domain and "/projects/" in path:
+        #     return True
         elif "gitee.com" in domain and "/blob/" not in path:
             return True
         else:
@@ -621,123 +621,123 @@ class BitBucketCodebase(Codebase):
         else:
             return None
 
-class SourceForgeCodebase(Codebase):
-    def __init__(self, url: str) -> None:
-        super().__init__(url)
-        if self.type != CodebaseType.SOURCEFORGE:
-            raise ValueError("This is not a SourceForge codebase")
+# class SourceForgeCodebase(Codebase):
+#     def __init__(self, url: str) -> None:
+#         super().__init__(url)
+#         if self.type != CodebaseType.SOURCEFORGE:
+#             raise ValueError("This is not a SourceForge codebase")
         
-    def check_is_repo(self) -> bool:
-        """
-        Checks if the URL is a SourceForge repository URL.
+#     def check_is_repo(self) -> bool:
+#         """
+#         Checks if the URL is a SourceForge repository URL.
 
-        Returns
-        -------
-        bool
-            True if the URL is a SourceForge repository URL, False otherwise.
-        """
-        repo_pattern = r'^https://sourceforge\.net/projects/[^/]+$'
+#         Returns
+#         -------
+#         bool
+#             True if the URL is a SourceForge repository URL, False otherwise.
+#         """
+#         repo_pattern = r'^https://sourceforge\.net/projects/[^/]+$'
         
-        if re.match(repo_pattern, self.repository_url):
-            return True
-        else:
-            return False
+#         if re.match(repo_pattern, self.repository_url):
+#             return True
+#         else:
+#             return False
 
-    def get_id(self) -> tuple[str, str]:
-        """
-        Extracts the project name from the SourceForge repository URL.
+#     def get_id(self) -> tuple[str, str]:
+#         """
+#         Extracts the project name from the SourceForge repository URL.
 
-        Returns
-        -------
-        str
-            The project name.
-        """
-        path_parts = urlparse(self.repository_url).path.split('/')
-        project = path_parts[2]
+#         Returns
+#         -------
+#         str
+#             The project name.
+#         """
+#         path_parts = urlparse(self.repository_url).path.split('/')
+#         project = path_parts[2]
         
-        return project
+#         return project
     
-    def get_topics(self) -> list:
-        """
-        Fetches the topics of the SourceForge repository.
+#     def get_topics(self) -> list:
+#         """
+#         Fetches the topics of the SourceForge repository.
 
-        Returns
-        -------
-        list
-            A list of topics associated with the SourceForge repository.
-        """
-        project = self.get_id()
-        api_url = f"https://sourceforge.net/rest/p/{project}"
-        response = requests.get(api_url)
+#         Returns
+#         -------
+#         list
+#             A list of topics associated with the SourceForge repository.
+#         """
+#         project = self.get_id()
+#         api_url = f"https://sourceforge.net/rest/p/{project}"
+#         response = requests.get(api_url)
 
-        if response.status_code == 200:
-            return response.json().get("tags", [])
-        else:
-            print(f"Error fetching topics: {response.status_code}")
-            return []
+#         if response.status_code == 200:
+#             return response.json().get("tags", [])
+#         else:
+#             print(f"Error fetching topics: {response.status_code}")
+#             return []
         
-    def get_readme(self) -> str:
-        """
-        Fetches the README content of the SourceForge repository.
+#     def get_readme(self) -> str:
+#         """
+#         Fetches the README content of the SourceForge repository.
 
-        Returns
-        -------
-        str
-            The decoded content of the README file.
-        """
-        project = self.get_id()
-        api_url = f"https://sourceforge.net/projects/{project}/files/README.md/download"
-        response = requests.get(api_url)
+#         Returns
+#         -------
+#         str
+#             The decoded content of the README file.
+#         """
+#         project = self.get_id()
+#         api_url = f"https://sourceforge.net/projects/{project}/files/README.md/download"
+#         response = requests.get(api_url)
 
-        if response.status_code == 200:
-            return response.text
-        else:
-            print(f"Error fetching README: {response.status_code}")
-            return ''
+#         if response.status_code == 200:
+#             return response.text
+#         else:
+#             print(f"Error fetching README: {response.status_code}")
+#             return ''
 
-    def get_repo_desc(self) -> str:
-        """
-        Fetches the description of the SourceForge repository.
+#     def get_repo_desc(self) -> str:
+#         """
+#         Fetches the description of the SourceForge repository.
 
-        Returns
-        -------
-        str
-            The description of the SourceForge repository.
-        """
-        project = self.get_id()
-        api_url = f"https://sourceforge.net/rest/p/{project}"
-        response = requests.get(api_url)
+#         Returns
+#         -------
+#         str
+#             The description of the SourceForge repository.
+#         """
+#         project = self.get_id()
+#         api_url = f"https://sourceforge.net/rest/p/{project}"
+#         response = requests.get(api_url)
 
-        if response.status_code == 200:
-            return response.json().get("short_description", "")
-        else:
-            print(f"Error fetching repo description: {response.status_code}")
-            return ''
+#         if response.status_code == 200:
+#             return response.json().get("short_description", "")
+#         else:
+#             print(f"Error fetching repo description: {response.status_code}")
+#             return ''
         
-    def combine_info(self) -> Union[dict, None]:
-        """
-        Combines the topics, README content, and description of the SourceForge repository into a dictionary.
+#     def combine_info(self) -> Union[dict, None]:
+#         """
+#         Combines the topics, README content, and description of the SourceForge repository into a dictionary.
 
-        Returns
-        -------
-        dict
-            A dictionary containing the topics, README content, and description of the SourceForge repository.
-        """
-        if self.check_is_repo():
-            topics = self.get_topics()
-            readme = self.get_readme()
-            desc = self.get_repo_desc()
+#         Returns
+#         -------
+#         dict
+#             A dictionary containing the topics, README content, and description of the SourceForge repository.
+#         """
+#         if self.check_is_repo():
+#             topics = self.get_topics()
+#             readme = self.get_readme()
+#             desc = self.get_repo_desc()
             
-            info_dict = {
-                'topics': topics,
-                'readme': readme,
-                'description': desc
-            }
+#             info_dict = {
+#                 'topics': topics,
+#                 'readme': readme,
+#                 'description': desc
+#             }
 
-            return info_dict
+#             return info_dict
         
-        else:
-            return None
+#         else:
+#             return None
 
 class GiteeCodebase(Codebase):
     def __init__(self, url):
@@ -754,9 +754,12 @@ class GiteeCodebase(Codebase):
         bool
             True if the URL is a Gitee repository URL, False otherwise.
         """
+        profile_pattern = r'^https://gitee\.com/[^/]+$'
         repo_pattern = r'^https://gitee\.com/[^/]+/[^/]+$'
         
-        if re.match(repo_pattern, self.repository_url):
+        if re.match(profile_pattern, self.repository_url):
+            return False
+        elif re.match(repo_pattern, self.repository_url):
             return True
         else:
             return False
@@ -786,8 +789,11 @@ class GiteeCodebase(Codebase):
         """
         owner, repo = self.get_id()
         api_url = f"https://gitee.com/api/v5/repos/{owner}/{repo}/topics"
-        headers = {"Authorization": "YOUR_GITEE_API_KEY"}
-        response = requests.get(api_url, headers=headers)
+        # headers = {"Authorization": "YOUR_GITEE_API_KEY"}
+        response = requests.get(
+            api_url, 
+            # headers=headers
+        )
 
         if response.status_code == 200:
             return response.json()
@@ -806,8 +812,11 @@ class GiteeCodebase(Codebase):
         """
         owner, repo = self.get_id()
         api_url = f"https://gitee.com/api/v5/repos/{owner}/{repo}/readme"
-        headers = {"Authorization": "YOUR_GITEE_API_KEY"}
-        response = requests.get(api_url, headers=headers)
+        # headers = {"Authorization": "YOUR_GITEE_API_KEY"}
+        response = requests.get(
+            api_url, 
+            # headers=headers
+        )
 
         if response.status_code == 200:
             content = response.json()["content"]
@@ -828,8 +837,11 @@ class GiteeCodebase(Codebase):
         """
         owner, repo = self.get_id()
         api_url = f"https://gitee.com/api/v5/repos/{owner}/{repo}"
-        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-        response = requests.get(api_url, headers=headers)
+        # headers = {"Authorization": "YOUR_GITEE_API_KEY"}
+        response = requests.get(
+            api_url, 
+            # headers=headers
+        )
 
         if response.status_code == 200:
             return response.json().get("description", "")
