@@ -3,7 +3,7 @@ import os
 import requests
 import base64
 from urllib.parse import urlparse, urlunparse
-import json
+from assets.key_import import GITHUB_TOKEN
 
 class CodebaseType(str, Enum):
     """
@@ -228,7 +228,7 @@ class GitHubCodebase(Codebase):
         api_url = f"https://api.github.com/repos/{owner}/{repo}/topics"
 
         # Make a GET request to the GitHub API
-        headers = {"Accept": "application/vnd.github.mercy-preview+json"}
+        headers = {"Accept": "application/vnd.github.v3+json", "Authorization": f"token {GITHUB_TOKEN}"}
         response = requests.get(api_url, headers=headers)
 
         # Check if the request was successful
@@ -248,7 +248,7 @@ class GitHubCodebase(Codebase):
         api_url = f"https://api.github.com/repos/{owner}/{repo}/readme"
 
         # Make a GET request to the GitHub API
-        headers = {"Accept": "application/vnd.github.v3+json"}
+        headers = {"Accept": "application/vnd.github.v3+json", "Authorization": f"token {GITHUB_TOKEN}"}
         response = requests.get(api_url, headers=headers)
 
         if response.status_code == 200:
@@ -266,7 +266,7 @@ class GitHubCodebase(Codebase):
         # Construct the GitHub API URL for the README
         api_url = f"https://api.github.com/repos/{owner}/{repo}"
         # Make a GET request to the GitHub API
-        headers = {"Accept": "application/vnd.github.v3+json", "Authorization": f"token {os.getenv('GITHUB_TOKEN')}"}
+        headers = {"Accept": "application/vnd.github.v3+json", "Authorization": f"token {GITHUB_TOKEN}"}
         response = requests.get(api_url, headers=headers)
         
         if response.status_code == 200:
