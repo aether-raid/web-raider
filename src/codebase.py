@@ -297,12 +297,12 @@ class GitHubCodebase(Codebase):
         if self.check_is_repo():
             topics = self.get_topics() if not None else []  # Default to an empty list if None
             readme = self.get_readme() if not None else ''  # Default to an empty string if None
-            # desc = self.get_repo_desc() if not None else '' # Default to an empty string if None
+            desc = self.get_repo_desc() if not None else '' # Default to an empty string if None
             
             info_dict = {
                 'topics': topics,
                 'readme': readme,
-                # 'description': desc
+                'description': desc
             }
 
             return info_dict
