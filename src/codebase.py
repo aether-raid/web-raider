@@ -340,6 +340,25 @@ class GitHubCodebase(Codebase):
             print(f"Error fetching repo description: {response.status_code}")
             return ''
         
+    def get_license(self) -> str:
+        # Extract owner and repo from the repository URL
+        owner, repo = self.get_id()
+
+        # Construct the GitHub API URL for the README
+        api_url = f"https://api.github.com/repos/{owner}/{repo}/license"
+        # Make a GET request to the GitHub API
+        headers = {"Accept": "application/vnd.github.v3+json", "Authorization": f"token {GITHUB_TOKEN}"}
+        response = requests.get(
+            api_url, 
+            headers=headers
+        )
+        
+        if response.status_code == 200:
+            return response.json().get('license', {}).get('name', '')
+        else:
+            print(f"Error fetching repo license: {response.status_code}")
+            return ''
+        
     def combine_info(self) -> Union[dict, None]:
         """
         Combines the topics, README content, and description of the GitHub repository into a dictionary.
@@ -354,11 +373,13 @@ class GitHubCodebase(Codebase):
             topics = self.get_topics()
             readme = self.get_readme()
             desc = self.get_repo_desc()
+            license = self.get_license()
             
             info_dict = {
                 'topics': topics,
                 'readme': readme,
-                'description': desc
+                'description': desc,
+                'license': license
             }
 
             return info_dict
@@ -475,6 +496,25 @@ class GitLabCodebase(Codebase):
             print(f"Error fetching repo description: {response.status_code}")
             return ''
         
+    def get_license(self) -> str:
+        # Extract owner and repo from the repository URL
+        owner, repo = self.get_id()
+
+        # Construct the GitLab API URL for the README
+        api_url = f"https://gitlab.com/api/v4/projects/{owner}%2F{repo}/repository/files/LICENSE/raw"
+        # Make a GET request to the GitLab API
+        # headers = {"Accept": "application/vnd.github.v3+json", "Authorization": f"token {GITLAB_TOKEN}"}
+        response = requests.get(
+            api_url, 
+            # headers=headers
+        )
+        
+        if response.status_code == 200:
+            return response.text
+        else:
+            print(f"Error fetching repo license: {response.status_code}")
+            return ''
+        
     def combine_info(self) -> Union[dict, None]:
         """
         Combines the topics, README content, and description of the GitLab repository into a dictionary.
@@ -488,11 +528,13 @@ class GitLabCodebase(Codebase):
             topics = self.get_topics()
             readme = self.get_readme()
             desc = self.get_repo_desc()
+            license = self.get_license()
             
             info_dict = {
                 'topics': topics,
                 'readme': readme,
-                'description': desc
+                'description': desc,
+                'license': license
             }
 
             return info_dict
@@ -596,6 +638,25 @@ class BitBucketCodebase(Codebase):
             print(f"Error fetching repo description: {response.status_code}")
             return ''
         
+    def get_license(self) -> str:
+        # Extract owner and repo from the repository URL
+        owner, repo = self.get_id()
+
+        # Construct the BitBucket API URL for the README
+        api_url = f"https://api.bitbucket.org/2.0/repositories/{owner}/{repo}/src/master/LICENSE"
+        # Make a GET request to the BitBucket API
+        # headers = {"Accept": "application/vnd.github.v3+json", "Authorization": f"token {BITBUCKET_TOKEN}"}
+        response = requests.get(
+            api_url, 
+            # headers=headers
+        )
+        
+        if response.status_code == 200:
+            return response.text
+        else:
+            print(f"Error fetching repo license: {response.status_code}")
+            return ''
+        
     def combine_info(self) -> Union[dict, None]:
         """
         Combines the topics, README content, and description of the BitBucket repository into a dictionary.
@@ -609,11 +670,13 @@ class BitBucketCodebase(Codebase):
             topics = self.get_topics()
             readme = self.get_readme()
             desc = self.get_repo_desc()
+            license = self.get_license()
             
             info_dict = {
                 'topics': topics,
                 'readme': readme,
-                'description': desc
+                'description': desc,
+                'license': license
             }
 
             return info_dict
@@ -849,6 +912,34 @@ class GiteeCodebase(Codebase):
             print(f"Error fetching repo description: {response.status_code}")
             return ''
         
+    def get_license(self) -> str:
+        # Extract owner and repo from the repository URL
+        owner, repo = self.get_id()
+
+        # filter for potential license files
+        license_types = ['LICENSE', 'LICENSE.md', 'LICENSE.txt']
+
+        for license in license_types:
+            # Construct the Gitee API URL for the README
+            api_url = f"https://gitee.com/api/v5/repos/{owner}/{repo}/contents/{license}"
+            # Make a GET request to the Gitee API
+            # headers = {"Accept": "application/vnd.github.v3+json", "Authorization": f"token {GITHUB_TOKEN}"}
+            response = requests.get(
+                api_url,
+                # headers=headers
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                
+                if result != []:
+                    return base64.b64decode(result.get('content', '')).decode('utf-8')
+            else:
+                print(f"Error fetching repo license: {response.status_code}")
+        
+        # failed to get any results
+        return ''
+        
     def combine_info(self) -> Union[dict, None]:
         """
         Combines the topics, README content, and description of the Gitee repository into a dictionary.
@@ -862,11 +953,13 @@ class GiteeCodebase(Codebase):
             topics = self.get_topics()
             readme = self.get_readme()
             desc = self.get_repo_desc()
+            license = self.get_license()
             
             info_dict = {
                 'topics': topics,
                 'readme': readme,
-                'description': desc
+                'description': desc,
+                'license': license
             }
 
             return info_dict
