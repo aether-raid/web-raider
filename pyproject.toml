@@ -16,6 +16,7 @@ scikit-learn = "^1.5.1"
 bs4 = "^0.0.2"
 litellm = "^1.46.6"
 boto3 = "^1.35.22"
+pandas = "^2.2.2"
 
 
 [tool.poetry.group.dev.dependencies]
