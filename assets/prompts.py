@@ -46,7 +46,7 @@ class Prompts(str, Enum):
     You will be given information about each codebase, including its description, topics, README content, and license.
     Your job is to analyze this information and state whether the codebase is relevant or not.
 
-    Output JUST ONE boolean value (True or False). If the license is not an open source license or there is not license information, output False.
+    Output JUST ONE boolean value (True or False). If the license is not an open source license or there is no license information, output False.
     
     Do NOT elaborate on your decision.
     """
@@ -65,7 +65,9 @@ class Prompts(str, Enum):
     - 81-100: Very high relevance
 
     Please provide a relevance score for each codebase, along with a brief explanation for your score. Additionally, provide a table comparing the pros and con
-    of each codebase.
+    of each codebase. 
+
+    Do NOT output codebase information if score is less than or equal to 65.
 
     Output Format:
     --------------
