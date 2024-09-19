@@ -1,6 +1,6 @@
 # assets/relevance.py
 
-import json
+import litellm
 from textwrap import dedent
 from openai import AzureOpenAI
 from .prompts import Prompts
@@ -12,7 +12,7 @@ client = AzureOpenAI(
     api_key=AZURE_KEY
 )
 
-def call_query_simplifier(query):
+def call_query_simplifier(query: str):
     simplifier = client.chat.completions.create(
         model=AZURE_MODEL,
         messages = [
@@ -32,20 +32,25 @@ def call_query_simplifier(query):
     response = simplifier.choices[0].message.content
     return response
 
-def consolidate_codebases_info(codebases):
+def consolidate_codebases_info(codebases: list[dict]):
     """Helper function to help consolidate information about codebases"""
     codebases_info = ''
 
     for i in range(len(codebases)):
-        codebases_info += f'Codebase {i + 1}\n\n'
-        codebases_info += f'URL: {codebases[i]["url"]}\n\n'
-        codebases_info += f'Topics:\n{codebases[i]["info"]["topics"]}\n\n'
-        codebases_info += f'README:\n{codebases[i]["info"]["readme"]}\n\n'
-        # codebases_info += f'Description:\n{content["description"]}\n\n'
+        # check if codebase information was not extracted
+        # could have various reasons:
+        # 1. check_is_repo is False so codebase[i]['info'] == None
+        # 2. just didn't work or smth
+        if codebases[i]['info'] is not None:
+            codebases_info += f'Codebase {i + 1}\n\n'
+            codebases_info += f'URL: {codebases[i]["url"]}\n\n'
+            codebases_info += f'Topics:\n{codebases[i]["info"]["topics"]}\n\n'
+            codebases_info += f'README:\n{codebases[i]["info"]["readme"]}\n\n'
+            codebases_info += f'Description:\n{codebases[i]["info"]["description"]}\n\n'
 
     return codebases_info
 
-def call_relevance(codebases, query):
+def call_relevance(codebases: list[dict], query: str):
     codebases_info = consolidate_codebases_info(codebases)
 
     # response_format = json.dumps({
@@ -86,7 +91,7 @@ def call_relevance(codebases, query):
     response = relevance.choices[0].message.content
     return response
 
-def call_pro_con(codebases, query):
+def call_pro_con(codebases: list[dict], query: str):
     codebases_info = consolidate_codebases_info(codebases)
 
     pro_con = client.chat.completions.create(
@@ -108,7 +113,7 @@ def call_pro_con(codebases, query):
     response = pro_con.choices[0].message.content
     return response
 
-def call_scorer(codebases, query, pro_con):
+def call_scorer(codebases: list[dict], query: str, pro_con):
     codebases_info = consolidate_codebases_info(codebases)
 
     scorer = client.chat.completions.create(
