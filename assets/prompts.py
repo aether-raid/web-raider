@@ -64,9 +64,6 @@ class Prompts(str, Enum):
     - 61-80: High relevance
     - 81-100: Very high relevance
 
-    Please provide a relevance score for each codebase, along with a brief explanation for your score. Additionally, provide a table comparing the pros and con
-    of each codebase. 
-
     Do NOT output codebase information if score is less than or equal to 65.
 
     Output Format:
