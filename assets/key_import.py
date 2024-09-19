@@ -1,13 +1,17 @@
 # assets/key_import.py
 
-import json
+import os
 
-# get the keys out
-keys = json.load(open('assets/keys.json', 'r'))
+# Azure OpenAI gpt4o keys
+AZURE_ENDPOINT = os.environ['AZURE_API_BASE']
+AZURE_KEY = os.environ['AZURE_API_KEY']
+AZURE_MODEL = 'azure/gpt4o'
+AZURE_API_VERSION = os.environ['AZURE_API_VERSION']
 
-AZURE_ENDPOINT = keys[0]['api_base']
-AZURE_KEY = keys[0]['api_key']
-AZURE_MODEL = keys[0]['model']
-AZURE_API_VERSION = keys[0]['api_version']
+# AWS Bedrock Keys
+AWS_ACCESS_KEY_ID = os.environ['AWS_ACCESS_KEY_ID']
+AWS_SECRET_ACCESS_KEY = os.environ['AWS_SECRET_ACCESS_KEY']
+AWS_REGION_NAME = os.environ['AWS_REGION_NAME']
 
-GITHUB_TOKEN = keys[1]['PAT']
+# Codebase Keys
+GITHUB_TOKEN = os.environ['GITHUB_TOKEN']
