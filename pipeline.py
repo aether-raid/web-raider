@@ -2,14 +2,14 @@ from src.article import CodeArticle
 from src.search import GoogleSearch
 from src.codebase import Codebase, CodebaseType, GitHubCodebase
 from src.url_classifier import url_classifier
-from assets.relevance import call_relevance
+from assets.model_calls import call_query_simplifier, call_relevance, call_pro_con, call_scorer
 import builtins
-# import json    # just to dump the codebases thing to see how shit works
+import json
 
 def useless_func(*_):
     return
 
-def pipeline(query, verbose = False):
+def pipeline(query, verbose = False): 
     print = builtins.print if verbose else useless_func
 
     print("Searching Google...")
@@ -19,19 +19,34 @@ def pipeline(query, verbose = False):
         
     print(f"Found {len(results)} Relevant Results!\n")
     
-    codebases = {}
+    codebases = []
+    seen_urls = set()
     
     for url in results:
+        if url in seen_urls:
+            continue
+        
+        seen_urls.add(url)
         print(url)
-        original_num = len(codebases)
 
         if url_classifier(url) == 'Codebase':
             object = Codebase(url)
 
-            if object.is_code(object.original_url):
+            if object.is_code(object.repository_url):
                 codebase_type = CodebaseType.format_type(object.type)
-                print(f"Found {codebase_type} Repository {object.original_url}!")
-                codebases[object.original_url] = object.combine_info()
+
+                # first check if the link does lead to a repository
+                if codebase.check_is_repo():
+                    print(f"Found {codebase_type} Repository {object.repository_url}")
+
+                    codebase = {
+                        'url': object.repository_url,
+                        'info': object.combine_info(),
+                    }
+
+                    # relevance check for each codebase separately to circumvent token limit
+                    if str(call_relevance(codebase, query)):
+                        codebases.append(codebase)
         
         elif url_classifier(url) == 'Article':
             print(f"Opening Article, {url}...")
@@ -39,33 +54,67 @@ def pipeline(query, verbose = False):
 
             for codebase in object.code_urls():
                 codebase_type = CodebaseType.format_type(codebase.type)
-                print(f"Found {codebase_type} Repository {codebase.original_url}!")
-                codebases[codebase.original_url] = codebase.combine_info()
+
+                # first check if the link does lead to a repository
+                if codebase.check_is_repo():
+                    print(f"Found {codebase_type} Repository {codebase.repository_url}")
+
+                    codebase = {
+                        'url': object.repository_url,
+                        'info': object.combine_info(),
+                    }
+
+                    # relevance check for each codebase separately to circumvent token limit
+                    if str(call_relevance(codebase, query)):
+                        codebases.append(codebase)
 
         elif url_classifier(url) == 'Forum':
             pass
             # object = CodeForum(url)
 
         else:
-            pass
-        
-        if original_num == len(codebases):
-            print("Found NO new codebases!")
-        else:
-            print(f"Found {len(codebases) - original_num} new codebases!")
+            continue
         
         print("\n-------------------------------------------------------------------\n")
     
     print(f"\nFound {len(codebases)} Codebases!")
 
-    response = call_relevance(codebases, QUERY)
+    if codebases:
+        # now do pros and cons evaluation
+        pro_con_response = call_pro_con(codebases, query)
 
-    with open('output.txt', 'w') as file:
-        file.write(response)
+        # now get the scorer
+        scorer_response = call_scorer(codebases, query, pro_con_response)
 
-    file.close()
+        with open('output.txt', 'a') as file:
+            file.write(f'Query: {query}')
+            file.write('\n\n')
+            file.write(scorer_response)
+            file.write('\n\n')
+    else:
+        with open('output.txt', 'a') as file:
+            file.write(f'Query: {query}')
+            file.write('\n\n')
+            file.write('No relevant codebases found.\n\n')
 
 # test portion cuz im lazy to write test file
-QUERY = 'Can you code a VSCode Extension using React?'
+def main():
+    SAMPLE_QUERY = 'Can you code a VSCode Extension using React?'
 
-pipeline(QUERY, True)
+    QUERY = 'Can you find codebases on human-computer interactions?'
+
+    # new query for "codebase research problem" according to aloysius
+    CODEBASE_QUERY = """
+    i specifically want open source alternatives to this:
+
+    Flowith is an innovative, canvas-based AI tool designed for content generation and deep work. It allows users to interactively create and organize various types of content, including long texts, code, and images, using a visually intuitive interface.
+    """
+
+    # pipeline(QUERY, True)
+    queries = call_query_simplifier(SAMPLE_QUERY)
+    queries = json.loads(queries)
+
+    for query in queries['prompts']:
+        pipeline(query, True)
+
+main()
