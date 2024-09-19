@@ -2,7 +2,8 @@ from src.article import CodeArticle
 from src.search import GoogleSearch
 from src.codebase import Codebase, CodebaseType, GitHubCodebase
 from src.url_classifier import url_classifier
-from assets.model_calls import call_query_simplifier, call_relevance, call_pro_con, call_scorer
+from src.model_calls import call_query_simplifier, call_relevance, call_pro_con, call_scorer
+from src.utils import json_to_table
 import builtins
 import json
 
@@ -95,6 +96,7 @@ def pipeline(query, verbose = False):
             file.write('\n\n')
             file.write(scorer_response)
             file.write('\n\n')
+            file.write(json_to_table(pro_con_response))
     else:
         with open('output.txt', 'a') as file:
             file.write(f'Query: {query}')
@@ -105,7 +107,7 @@ def pipeline(query, verbose = False):
 def main():
     SAMPLE_QUERY = 'Can you code a VSCode Extension using React?'
 
-    QUERY = 'Can you find codebases on human-computer interactions?'
+    QUERY = 'How do I parse Javascript AST in Python with Tree-Sitter?'
 
     # new query for "codebase research problem" according to aloysius
     CODEBASE_QUERY = """
@@ -115,7 +117,7 @@ def main():
     """
 
     # pipeline(QUERY, True)
-    queries = call_query_simplifier(SAMPLE_QUERY)
+    queries = call_query_simplifier(CODEBASE_QUERY)
     queries = json.loads(queries)
 
     for query in queries['prompts']:
