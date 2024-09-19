@@ -21,9 +21,10 @@ class Prompts(str, Enum):
 
     QUERY_PROMPT = """
     You are a PhD researcher. Given a user query, first decide whether the query is too complex for a Google Search to yield results that can lead to codebases.
-    If the query is simple enough, you can just return the query directly.
     
-    If the query is too complex, break the query down into smaller sub-queries. You may come up with up to 3 relevant prompts that can result in relevant codebases through a Google search.
+    If the query is simple enough, you can just return the query directly. 
+    
+    Else if the query is too complex, break the query down into smaller sub-queries. You may come up with up to 3 relevant prompts that can result in relevant codebases through a Google search.
 
     Do NOT output anything other than the json object.
 
@@ -68,19 +69,19 @@ class Prompts(str, Enum):
     Output Format:
     --------------
 
-    Codebase1:
+    Codebase1 (URL: XXXX):
 
     Relevance Score: <Insert Score>
     Explanation: <Insert Explanation>
 
-    Codebase2:
+    Codebase2 (URL: XXXX):
 
     Relevance Score: <Insert Score>
     Explanation: <Insert Explanation>
 
     ... 
 
-    CodebaseN:
+    CodebaseN (URL: XXXX):
 
     Relevance Score: <Insert Score>
     Explanation: <Insert Explanation>
