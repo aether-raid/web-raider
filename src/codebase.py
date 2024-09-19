@@ -206,7 +206,7 @@ class Codebase:
         domain = parsed_url.netloc.lower()
         path = parsed_url.path.lower()
 
-        if "github.com" in domain and 'docs.github.com' not in domain:
+        if "github.com" in domain and 'docs.github.com' not in domain and '/settings/' not in path and '/sponsors/' not in path:
             return True
         elif "gitlab.com" in domain and "/-/blob/" not in path:
             return True
@@ -524,23 +524,22 @@ class GitLabCodebase(Codebase):
         dict
             A dictionary containing the topics, README content, and description of the GitLab repository.
         """
-        if self.check_is_repo():
-            topics = self.get_topics()
-            readme = self.get_readme()
-            desc = self.get_repo_desc()
-            license = self.get_license()
-            
-            info_dict = {
-                'topics': topics,
-                'readme': readme,
-                'description': desc,
-                'license': license
-            }
 
-            return info_dict
+        # initially implemented check_is_repo here
+        # but shifted it to src/pipeline.py instead
+        topics = self.get_topics()
+        readme = self.get_readme()
+        desc = self.get_repo_desc()
+        license = self.get_license()
         
-        else:
-            return None
+        info_dict = {
+            'topics': topics,
+            'readme': readme,
+            'description': desc,
+            'license': license
+        }
+
+        return info_dict
 
 class BitBucketCodebase(Codebase):
     def __init__(self, url: str) -> None:
