@@ -3,8 +3,8 @@
 import litellm
 from textwrap import dedent
 from openai import AzureOpenAI
-from .prompts import Prompts
-from .key_import import AZURE_ENDPOINT, AZURE_KEY, AZURE_MODEL, AZURE_API_VERSION
+from ..assets.prompts import Prompts
+from ..assets.key_import import AZURE_ENDPOINT, AZURE_KEY, AZURE_MODEL, AZURE_API_VERSION
 
 client = AzureOpenAI(
     azure_endpoint=AZURE_ENDPOINT,
@@ -12,10 +12,30 @@ client = AzureOpenAI(
     api_key=AZURE_KEY
 )
 
+litellm.model_alias_map = {
+    'sonnet-3': 'anthropic.claude-3-sonnet-20240229-v1:0'
+}
+
 def call_query_simplifier(query: str) -> str:
-    simplifier = client.chat.completions.create(
-        model=AZURE_MODEL,
-        messages = [
+    # simplifier = client.chat.completions.create(
+    #     model=AZURE_MODEL,
+    #     messages = [
+    #         {
+    #             'role': 'system',
+    #             'content': dedent(Prompts.QUERY_PROMPT)
+    #         },
+    #         {
+    #             'role': 'user',
+    #             'content': query
+    #         },
+    #     ],
+    #     temperature=0,
+    #     # response_format=response_format
+    # )
+
+    litellm_simplifier = litellm.completion(
+    model="sonnet-3",
+    messages = [
             {
                 'role': 'system',
                 'content': dedent(Prompts.QUERY_PROMPT)
@@ -26,10 +46,10 @@ def call_query_simplifier(query: str) -> str:
             },
         ],
         temperature=0,
-        # response_format=response_format
     )
 
-    response = simplifier.choices[0].message.content
+    # response = simplifier.choices[0].message.content
+    response = litellm_simplifier['choices'][0]['message']['content']
     return response
 
 def consolidate_codebases_info(codebases: list[dict]) -> str:
@@ -72,9 +92,25 @@ def call_relevance(codebases: list[dict], query: str) -> str:
     #     "type": "json_schema"
     # })
 
-    relevance = client.chat.completions.create(
-        model=AZURE_MODEL,
-        messages = [
+    # relevance = client.chat.completions.create(
+    #     model=AZURE_MODEL,
+    #     messages = [
+    #         {
+    #             'role': 'system',
+    #             'content': dedent(Prompts.RELEVANCE_PROMPT)
+    #         },
+    #         {
+    #             'role': 'user',
+    #             'content': f'Codebase Information: {codebases_info}\n\nUser Query: {query}'
+    #         },
+    #     ],
+    #     temperature=0,
+    #     # response_format=response_format
+    # )
+
+    litellm_relevance = litellm.completion(
+    model="sonnet-3",
+    messages = [
             {
                 'role': 'system',
                 'content': dedent(Prompts.RELEVANCE_PROMPT)
@@ -85,10 +121,10 @@ def call_relevance(codebases: list[dict], query: str) -> str:
             },
         ],
         temperature=0,
-        # response_format=response_format
     )
 
-    response = relevance.choices[0].message.content
+    # response = relevance.choices[0].message.content
+    response = litellm_relevance['choices'][0]['message']['content']
     return response
 
 def call_pro_con(codebases: list[dict], query: str) -> str:
