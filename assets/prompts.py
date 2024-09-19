@@ -41,13 +41,12 @@ class Prompts(str, Enum):
     """
 
     RELEVANCE_PROMPT = """
-    You are an AI assistant tasked with determining the relevance of codebases to a user-provided query.
+    You are an AI assistant tasked with determining the relevance of a codebase to a user-provided query.
+
     You will be given information about each codebase, including its description, topics, README content, and other metadata.
     Your job is to analyze this information and state whether the codebase is relevant or not.
 
-    Output a list of boolean values (True or False) in sequential order of codebases, with each response on one line.
-
-    Do NOT provide more than one boolean value for each codebase.
+    Output JUST ONE boolean value (True or False). Do NOT provide more than one boolean value for each codebase.
     """
 
     SCORER_PROMPT = """
