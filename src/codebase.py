@@ -1,5 +1,4 @@
 from enum import Enum
-import os
 import requests
 import base64
 import re
