@@ -12,7 +12,7 @@ client = AzureOpenAI(
     api_key=AZURE_KEY
 )
 
-def call_query_simplifier(query: str):
+def call_query_simplifier(query: str) -> str:
     simplifier = client.chat.completions.create(
         model=AZURE_MODEL,
         messages = [
@@ -32,7 +32,7 @@ def call_query_simplifier(query: str):
     response = simplifier.choices[0].message.content
     return response
 
-def consolidate_codebases_info(codebases: list[dict]):
+def consolidate_codebases_info(codebases: list[dict]) -> str:
     """Helper function to help consolidate information about codebases"""
     codebases_info = ''
 
@@ -50,7 +50,7 @@ def consolidate_codebases_info(codebases: list[dict]):
 
     return codebases_info
 
-def call_relevance(codebases: list[dict], query: str):
+def call_relevance(codebases: list[dict], query: str) -> str:
     codebases_info = consolidate_codebases_info(codebases)
 
     # response_format = json.dumps({
@@ -91,7 +91,7 @@ def call_relevance(codebases: list[dict], query: str):
     response = relevance.choices[0].message.content
     return response
 
-def call_pro_con(codebases: list[dict], query: str):
+def call_pro_con(codebases: list[dict], query: str) -> str:
     codebases_info = consolidate_codebases_info(codebases)
 
     pro_con = client.chat.completions.create(
@@ -113,7 +113,7 @@ def call_pro_con(codebases: list[dict], query: str):
     response = pro_con.choices[0].message.content
     return response
 
-def call_scorer(codebases: list[dict], query: str, pro_con):
+def call_scorer(codebases: list[dict], query: str, pro_con: str) -> str:
     codebases_info = consolidate_codebases_info(codebases)
 
     scorer = client.chat.completions.create(
