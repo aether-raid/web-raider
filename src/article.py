@@ -3,7 +3,7 @@
 from newspaper import Article
 from typing import Generator
 from src.codebase import Codebase
-
+from src.url_classifier import url_classifier
 
 class CodeArticle(Article):
     def __init__(self, url: str, download: bool = True, parse: bool = True):
@@ -29,13 +29,15 @@ class CodeArticle(Article):
                     results.add(codebase.repository_url)
 
             # can change search_depth limit depending on how deep we want to go
-            elif CodeArticle.is_article(url) and search_depth < 3:
-                article = CodeArticle(url)
-                for codebase in article.code_urls(search_depth=search_depth+1):
-                    if codebase.repository_url not in results:
-                        yield codebase
-                        results.add(codebase.repository_url)
-
-    @staticmethod
-    def is_article(self, url):
-        pass
+            
+            # update as of 190924 search_depth = 3 just digs extremely deep but results
+            # are not good either
+            elif url_classifier(url) and search_depth < 2:
+                try:
+                    article = CodeArticle(url)
+                    for codebase in article.code_urls(search_depth=search_depth+1):
+                        if codebase.repository_url not in results:
+                            yield codebase
+                            results.add(codebase.repository_url)
+                except:
+                    print(f'{url} does not lead to any meaningful results.')
