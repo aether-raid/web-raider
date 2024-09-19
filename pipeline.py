@@ -36,7 +36,7 @@ def pipeline(query, verbose = False):
                 codebase_type = CodebaseType.format_type(object.type)
 
                 # first check if the link does lead to a repository
-                if codebase.check_is_repo():
+                if object.check_is_repo():
                     print(f"Found {codebase_type} Repository {object.repository_url}")
 
                     codebase = {
@@ -45,28 +45,32 @@ def pipeline(query, verbose = False):
                     }
 
                     # relevance check for each codebase separately to circumvent token limit
-                    if str(call_relevance(codebase, query)):
+                    if str(call_relevance([codebase], query)):
                         codebases.append(codebase)
         
         elif url_classifier(url) == 'Article':
             print(f"Opening Article, {url}...")
             object = CodeArticle(url)
 
-            for codebase in object.code_urls():
-                codebase_type = CodebaseType.format_type(codebase.type)
+            for cb in object.code_urls():
+                # if url already is checked ignore it
+                if cb.original_url not in seen_urls:
+                    seen_urls.add(cb.original_url)
+                    
+                    codebase_type = CodebaseType.format_type(cb.type)
 
-                # first check if the link does lead to a repository
-                if codebase.check_is_repo():
-                    print(f"Found {codebase_type} Repository {codebase.repository_url}")
+                    # first check if the link does lead to a repository
+                    if cb.check_is_repo():
+                        print(f"Found {codebase_type} Repository {cb.repository_url}")
 
-                    codebase = {
-                        'url': object.repository_url,
-                        'info': object.combine_info(),
-                    }
+                        codebase = {
+                            'url': cb.repository_url,
+                            'info': cb.combine_info(),
+                        }
 
-                    # relevance check for each codebase separately to circumvent token limit
-                    if str(call_relevance(codebase, query)):
-                        codebases.append(codebase)
+                        # relevance check for each codebase separately to circumvent token limit
+                        if str(call_relevance([codebase], query)):
+                            codebases.append(codebase)
 
         elif url_classifier(url) == 'Forum':
             pass
