@@ -14,6 +14,7 @@ def url_classifier(url):
 
     # Refined List of Technical Article Domains
     article_domains = [
+        'medium.com',
         'dev.to',                  # Articles often link to GitHub repos
         'freecodecamp.org',        # Tutorials often reference codebases
         'smashingmagazine.com',    # Articles may include code examples and links
