@@ -92,6 +92,8 @@ class Prompts(str, Enum):
     You will be given information about each codebase, including its description, topics, README content, and other metadata.
     Your job is to provide a table listing the pros and cons of each codebase in the context of the user-provided query.
 
+    I want the output to BE A STRING. Do NOT add any backticks in the output.
+
     Output Format
     -------------
 
