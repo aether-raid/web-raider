@@ -40,4 +40,4 @@ class CodeArticle(Article):
                             yield codebase
                             results.add(codebase.repository_url)
                 except:
-                    print(f'{url} does not lead to any meaningful results.')
+                    pass
