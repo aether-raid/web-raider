@@ -13,7 +13,8 @@ client = AzureOpenAI(
 )
 
 litellm.model_alias_map = {
-    'sonnet-3': 'anthropic.claude-3-sonnet-20240229-v1:0'
+    'sonnet-3': 'anthropic.claude-3-sonnet-20240229-v1:0',
+    'sonnet-3.5': 'anthropic.claude-3-5-sonnet-20240620-v1:0'
 }
 
 def call_query_simplifier(query: str) -> str:
@@ -128,6 +129,9 @@ def call_relevance(codebases: list[dict], query: str) -> str:
     return response
 
 def call_pro_con(codebases: list[dict], query: str) -> str:
+    """
+    Note: Somehow, only when the AzureOpenAI model is used can the json string be outputted correctly.
+    """
     codebases_info = consolidate_codebases_info(codebases)
 
     pro_con = client.chat.completions.create(
@@ -146,15 +150,46 @@ def call_pro_con(codebases: list[dict], query: str) -> str:
         # response_format=response_format
     )
 
+    # litellm_pro_con = litellm.completion(
+    # model="sonnet-3.5",
+    # messages = [
+    #         {
+    #             'role': 'system',
+    #             'content': dedent(Prompts.PRO_CON_PROMPT)
+    #         },
+    #         {
+    #             'role': 'user',
+    #             'content': f'Codebase Information: {codebases_info}\n\nUser Query: {query}'
+    #         },
+    #     ],
+    #     temperature=0,
+    # )
+
     response = pro_con.choices[0].message.content
+    # response = litellm_pro_con['choices'][0]['message']['content']
     return response
 
 def call_scorer(codebases: list[dict], query: str, pro_con: str) -> str:
     codebases_info = consolidate_codebases_info(codebases)
 
-    scorer = client.chat.completions.create(
-        model=AZURE_MODEL,
-        messages = [
+    # scorer = client.chat.completions.create(
+    #     model=AZURE_MODEL,
+    #     messages = [
+    #         {
+    #             'role': 'system',
+    #             'content': dedent(Prompts.SCORER_PROMPT)
+    #         },
+    #         {
+    #             'role': 'user',
+    #             'content': f'Codebase Information: {codebases_info}\n\nUser Query: {query}\n\nPro/Con Information: {pro_con}'
+    #         },
+    #     ],
+    #     temperature=0,
+    # )
+
+    litellm_scorer = litellm.completion(
+    model="sonnet-3.5",
+    messages = [
             {
                 'role': 'system',
                 'content': dedent(Prompts.SCORER_PROMPT)
@@ -167,7 +202,8 @@ def call_scorer(codebases: list[dict], query: str, pro_con: str) -> str:
         temperature=0,
     )
 
-    response = scorer.choices[0].message.content
+    # response = scorer.choices[0].message.content
+    response = litellm_scorer['choices'][0]['message']['content']
     return response
 
 def call_ranker(scorer: str) -> str:
