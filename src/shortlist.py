@@ -9,7 +9,22 @@ from .url_classifier import url_classifier
 from .model_calls import call_relevance
 from .utils import useless_func
 
-def codebase_shortlist(query, verbose=False):
+def codebase_shortlist(query: str, verbose: bool = False) -> list[dict]:
+    """
+    Shortlist codebases based on a query by searching Google and evaluating the results.
+
+    Parameters
+    ----------
+    query : str
+        The query string to search for codebases.
+    verbose : bool, optional
+        If True, prints detailed information during the process (default is False).
+
+    Returns
+    -------
+    list[dict]
+        A list of dictionaries containing information about the shortlisted codebases.
+    """
     print = builtins.print if verbose else useless_func
 
     print(f'Searching Google with: "{query}"')

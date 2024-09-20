@@ -3,14 +3,37 @@ from src.evaluate import codebase_evaluate
 from src.model_calls import call_query_simplifier
 import json
 
-def pipeline(query, verbose=False): 
+def pipeline(query: str, verbose: bool = False) -> list[dict]:
+    """
+    Process the query to shortlist and evaluate codebases.
+
+    Parameters
+    ----------
+    query : str
+        The query string to search for codebases.
+    verbose : bool, optional
+        If True, prints detailed information during the process (default is False).
+
+    Returns
+    -------
+    list[dict]
+        A list of dictionaries containing information about the evaluated codebases.
+    """
     codebases = codebase_shortlist(query, verbose)
     desired_info = codebase_evaluate(query, codebases, verbose)
 
     return desired_info
 
 # test portion cuz im lazy to write test file
-def main():
+def main() -> list[dict]:
+    """
+    Main function to test the pipeline with sample queries.
+
+    Returns
+    -------
+    list[dict]
+        A list of dictionaries containing information about the final evaluated codebases.
+    """
     SAMPLE_QUERY = 'Can you code a VSCode Extension using React?'
 
     QUERY = 'How do I parse Javascript AST in Python with Tree-Sitter?'

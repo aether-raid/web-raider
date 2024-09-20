@@ -5,7 +5,24 @@ import builtins
 from .utils import useless_func, json_to_table
 from .model_calls import call_pro_con, call_scorer, call_ranker
 
-def codebase_evaluate(query, codebases, verbose=False):
+def codebase_evaluate(query: str, codebases: list[dict], verbose: bool = False) -> list[dict]:
+    """
+    Evaluate codebases based on a query and return the filtered list of codebases.
+
+    Parameters
+    ----------
+    query : str
+        The query string to evaluate the codebases against.
+    codebases : list[dict]
+        A list of codebases to be evaluated.
+    verbose : bool, optional
+        If True, prints detailed information during evaluation (default is False).
+
+    Returns
+    -------
+    list[dict]
+        A list of codebases that match the query criteria.
+    """
     print = builtins.print if verbose else useless_func
 
     # no codebases to evaluate
