@@ -169,3 +169,22 @@ def call_scorer(codebases: list[dict], query: str, pro_con: str) -> str:
 
     response = scorer.choices[0].message.content
     return response
+
+def call_ranker(scorer: str) -> str:
+    ranker = litellm.completion(
+    model="sonnet-3",
+    messages = [
+            {
+                'role': 'system',
+                'content': dedent(Prompts.RANKER_PROMPT)
+            },
+            {
+                'role': 'user',
+                'content': f'Scoring of Codebases: {scorer}'
+            },
+        ],
+        temperature=0,
+    )
+
+    response = ranker['choices'][0]['message']['content']
+    return response
