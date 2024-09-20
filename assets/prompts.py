@@ -127,9 +127,9 @@ class Prompts(str, Enum):
 
     Example Output
     --------------
-    codebase1.com
-    codebase2.org
-    codebase3.io
-    codebase4.ai
-    codebase5.gg
+    codebase1
+    codebase2
+    codebase3
+    codebase4
+    codebase5
     """

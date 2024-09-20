@@ -1,6 +1,7 @@
 from src.shortlist import codebase_shortlist
 from src.evaluate import codebase_evaluate
 from src.model_calls import call_query_simplifier
+from src.utils import tidy_results, get_unique_codebases
 import json
 
 def pipeline(query: str, verbose: bool = False) -> list[dict]:
@@ -25,37 +26,45 @@ def pipeline(query: str, verbose: bool = False) -> list[dict]:
     return desired_info
 
 # test portion cuz im lazy to write test file
-def main() -> list[dict]:
+def main(user_query: str) -> list[dict]:
     """
-    Main function to test the pipeline with sample queries.
+    Main function.
+
+    Parameters
+    ----------
+    user_query : str
+        The query string to search for codebases.
 
     Returns
     -------
     list[dict]
         A list of dictionaries containing information about the final evaluated codebases.
     """
-    SAMPLE_QUERY = 'Can you code a VSCode Extension using React?'
-
-    QUERY = 'How do I parse Javascript AST in Python with Tree-Sitter?'
-
-    # new query for "codebase research problem" according to aloysius
-    CODEBASE_QUERY = """
-    i specifically want open source alternatives to this:
-
-    Flowith is an innovative, canvas-based AI tool designed for content generation and deep work. It allows users to interactively create and organize various types of content, including long texts, code, and images, using a visually intuitive interface.
-    """
-
     potential_codebases = []
 
     # pipeline(QUERY, True)
-    queries = call_query_simplifier(CODEBASE_QUERY)
+    queries = call_query_simplifier(user_query)
     queries = json.loads(queries)
 
     for query in queries['prompts']:
         potential_codebases.extend(pipeline(query, True))
 
-    final_codebases = codebase_evaluate(CODEBASE_QUERY, potential_codebases, True)
+    final_codebases = codebase_evaluate(user_query, get_unique_codebases(potential_codebases), True)
+    final_results = tidy_results(final_codebases)
+    data = json.dumps(final_results)
 
-    return final_codebases
+    print(data)
+    return data
 
-main()
+SAMPLE_QUERY = 'Can you code a VSCode Extension using React?'
+
+QUERY = 'How do I parse Javascript AST in Python with Tree-Sitter?'
+
+# new query for "codebase research problem" according to aloysius
+CODEBASE_QUERY = """
+i specifically want open source alternatives to this:
+
+Flowith is an innovative, canvas-based AI tool designed for content generation and deep work. It allows users to interactively create and organize various types of content, including long texts, code, and images, using a visually intuitive interface.
+"""
+
+main(QUERY)
