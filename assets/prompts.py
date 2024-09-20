@@ -118,3 +118,18 @@ class Prompts(str, Enum):
         ]
     }
     """
+
+    RANKER_PROMPT = """
+    You are an AI assistant tasked with ranking codebases based on a scoring system provided to you.
+
+    Rank the codebases in DESCENDING ORDER OF SCORE. Output ONLY THE TOP FIVE codebases, with each
+    codebase's URL taking up one line each. Do NOT output anything else.
+
+    Example Output
+    --------------
+    codebase1.com
+    codebase2.org
+    codebase3.io
+    codebase4.ai
+    codebase5.gg
+    """
