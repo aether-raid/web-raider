@@ -4,6 +4,9 @@ import json
 import pandas as pd
 
 def json_to_table(json_string):
+    """
+    Note: Somehow, this function only works when AzureOpenAI gpt-4o is used as the model to output in `call_pro_con`
+    """
     # Parse the JSON string
     data = json.loads(json_string)
     
@@ -24,3 +27,6 @@ def json_to_table(json_string):
     
     # Return the formatted table as a string
     return df.to_string(index=False)
+
+def useless_func(*_):
+    return
