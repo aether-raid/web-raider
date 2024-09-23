@@ -16,8 +16,10 @@ import json
 import logging
 import os
 import signal
+import argparse
+import uvicorn
 from typing import Any, Dict, List
-from fastapi import WebSocket, WebSocketDisconnect
+from fastapi import WebSocket, WebSocketDisconnect, FastAPI
 from .pipeline import pipeline_main
 
 logger = logging.getLogger("ConnectionManager")
@@ -184,10 +186,6 @@ class ConnectionManager:
 
 def main():
     conn_manager = ConnectionManager()
-
-    from fastapi import FastAPI
-    import argparse
-    import uvicorn
 
     app = FastAPI()
     app.add_api_websocket_route(
