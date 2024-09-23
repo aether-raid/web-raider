@@ -1,6 +1,6 @@
 # tests/test_web_raider.py
 
-from ..pipeline import main
+from src.pipeline import main
 
 SAMPLE_QUERY = 'Can you code a VSCode Extension using React?'
 
