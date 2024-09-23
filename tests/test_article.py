@@ -2,8 +2,8 @@
 
 import unittest
 
-from article import CodeArticle
-from codebase import Codebase
+from src.article import CodeArticle
+from src.codebase import Codebase
 
 ARTICLE_URL = "https://docs.r2devops.io/blog/writing-vscode-extension-with-react/"
 
