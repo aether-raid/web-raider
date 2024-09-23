@@ -38,8 +38,14 @@ Web Raider is a powerful web scraping and data extraction tool designed to help 
   - **prompts.py**: Defines various prompts used in model calls.
 - **tests/**: Contains unit tests for the application. Run the tests using `pytest` to ensure everything is working correctly.
 
+## Tasklist to complete before Wallaby
+
+1. fix relative/absolute import problem. don't rely on `-m`
+2. need to be able to run the code from any directory
+
 ## Future Implementations/Improvements
 
 - Use Machine Learning Classification Algorithms to classify types of URLs to their type (Codebase, Article, Forum)
 - Find a way to handle Forum URLs (right now they are not processed)
 - Find a way to scrape code directly from Articles and Forum URLs (right now only links are scraped)
+- Properly implement main query breakdown instead of just whacking LLM
