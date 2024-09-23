@@ -21,7 +21,7 @@ Web Raider is a powerful web scraping and data extraction tool designed to help 
 
 ## How the Repository Works
 
-- **src/**: Contains the core logic of the application.
+- **web-raider/**: Contains the core logic of the application.
   - **article.py**: Handles the extraction of codebase URLs from articles.
   - **codebase.py**: Defines the `Codebase` class and its subclasses for different code hosting platforms.
   - **connection_manager.py**: Manages WebSocket connections and message buffering.
@@ -33,9 +33,11 @@ Web Raider is a powerful web scraping and data extraction tool designed to help 
   - **url_classifier.py**: Classifies URLs into different categories.
   - **utils.py**: Contains utility functions.
   - **constants.py**: Defines constants used across the application.
+  - **__init__.py**: Initializes the web-raider package.
 - **assets/**: Contains auxiliary files and configurations.
   - **key_import.py**: Handles the import of API keys.
   - **prompts.py**: Defines various prompts used in model calls.
+  - **__init__.py**: Initializes the assets package.
 - **tests/**: Contains unit tests for the application. Run the tests using `pytest` to ensure everything is working correctly.
 
 ## Tasklist to complete before Wallaby
