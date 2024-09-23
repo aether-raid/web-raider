@@ -18,7 +18,7 @@ import os
 import signal
 from typing import Any, Dict, List
 from fastapi import WebSocket, WebSocketDisconnect
-from .pipeline import main
+from .pipeline import pipeline_main
 
 logger = logging.getLogger("ConnectionManager")
 
@@ -82,7 +82,7 @@ class ConnectionManager:
 
         if method == "query":
             user_query = params.get("query")
-            codebases = main(user_query)
+            codebases = pipeline_main(user_query)
             response = {"result": codebases}
             await self.send_message(websocket, response, session_id)
             await self.send_message(websocket, ConnectionManager.END_OF_MESSAGE_RESPONSE, session_id)
@@ -181,3 +181,26 @@ class ConnectionManager:
         finally:
             keepalive_task.cancel()
             logger.info("Keepalive task cancelled")
+
+def main():
+    conn_manager = ConnectionManager()
+
+    from fastapi import FastAPI
+    import argparse
+    import uvicorn
+
+    app = FastAPI()
+    app.add_api_websocket_route(
+        "/ws/{session_id}", conn_manager.websocket_endpoint)
+    app.add_api_route("/ping", conn_manager.ping)
+
+    parser = argparse.ArgumentParser(
+        description="Run AgentManager with FastAPI WebSocket")
+    parser.add_argument("--port", type=int, default=11111,
+                        help="Port for the FastAPI server")
+    args = parser.parse_args()
+
+    uvicorn.run(app, host="0.0.0.0", port=args.port)
+
+if __name__ == "__main__":
+    main()
