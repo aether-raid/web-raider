@@ -25,7 +25,7 @@ def pipeline(query: str, verbose: bool = False) -> list[dict]:
 
     return desired_info
 
-def main(user_query: str) -> list[dict]:
+def pipeline_main(user_query: str) -> list[dict]:
     """
     Main function.
 
