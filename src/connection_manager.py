@@ -18,7 +18,7 @@ import os
 import signal
 from typing import Any, Dict, List
 from fastapi import WebSocket, WebSocketDisconnect
-from pipeline import pipeline_main
+from .pipeline import main
 
 logger = logging.getLogger("ConnectionManager")
 
@@ -82,7 +82,7 @@ class ConnectionManager:
 
         if method == "query":
             user_query = params.get("query")
-            codebases = pipeline_main(user_query)
+            codebases = main(user_query)
             response = {"result": codebases}
             await self.send_message(websocket, response, session_id)
             await self.send_message(websocket, ConnectionManager.END_OF_MESSAGE_RESPONSE, session_id)
