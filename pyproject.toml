@@ -11,6 +11,13 @@ python = "^3.9"
 newspaper3k = "^0.2.8"
 googlesearch-python = "^1.2.5"
 lxml = {extras = ["html-clean"], version = "^5.3.0"}
+requests = "^2.32.3"
+scikit-learn = "^1.5.1"
+bs4 = "^0.0.2"
+litellm = "^1.46.6"
+boto3 = "^1.35.22"
+pandas = "^2.2.2"
+fastapi = "^0.115.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -23,7 +30,6 @@ ruff = "*"
 isort = "*"
 tox = "^4.11.4"
 ipykernel = "^6.29.5"
-types-requests = "^2.32.0.20240712"
 
 [build-system]
 requires = ["poetry-core"]

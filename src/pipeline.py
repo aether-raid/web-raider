@@ -1,45 +1,56 @@
-from article import CodeArticle
-from search import GoogleSearch
-from codebase import format_type
+from .shortlist import codebase_shortlist
+from .evaluate import codebase_evaluate
+from .model_calls import call_query_simplifier
+from .utils import tidy_results, get_unique_codebases
+import json
 
+def pipeline(query: str, verbose: bool = False) -> list[dict]:
+    """
+    Process the query to shortlist and evaluate codebases.
 
-def useless_func(*_):
-    return
+    Parameters
+    ----------
+    query : str
+        The query string to search for codebases.
+    verbose : bool, optional
+        If True, prints detailed information during the process (default is False).
 
-def pipeline(query, verbose = False):
-    if not verbose:
-        print = useless_func
+    Returns
+    -------
+    list[dict]
+        A list of dictionaries containing information about the evaluated codebases.
+    """
+    codebases = codebase_shortlist(query, verbose)
+    desired_info = codebase_evaluate(query, codebases, verbose)
 
-    print("Searching Google...")
-    search_result = GoogleSearch(query)
-    
-    results = []
-    
-    for url in search_result.relevant_urls():
-        results.append(url)
-        
-    print(f"Found {len(results)} Relevant Results!\n")
-    
-    codebases = {}
-    
-    for url in results:
-        print(f"Opening Article, {url}...")
-        article = CodeArticle(url)
-        
-        original_num = len(codebases)
-        
-        for codebase in article.code_urls():
-            codebase_type = format_type(codebase.type)
-            print(f"Found {codebase_type} Repository {codebase.repository_url}!")
-            codebases[codebase.repository_url]  = codebase
-        
-        if original_num == len(codebases):
-            print("Found NO new codebases!")
-        else:
-            print(f"Found {len(codebases) - original_num} new codebases!")
-        
-        print("\n-------------------------------------------------------------------\n")
-    
-    print(f"\nFound {len(codebases)} Codebases!")
-    
-    return [i for i in codebases]
+    return desired_info
+
+def main(user_query: str) -> list[dict]:
+    """
+    Main function.
+
+    Parameters
+    ----------
+    user_query : str
+        The query string to search for codebases.
+
+    Returns
+    -------
+    list[dict]
+        A list of dictionaries containing information about the final evaluated codebases.
+    """
+    potential_codebases = []
+
+    # pipeline(QUERY, True)
+    queries = call_query_simplifier(user_query)
+    queries = json.loads(queries)
+
+    for query in queries['prompts']:
+        potential_codebases.extend(pipeline(query, True))
+
+    final_codebases = codebase_evaluate(user_query, get_unique_codebases(potential_codebases), True)
+    final_results = tidy_results(final_codebases)
+    data = json.dumps(final_results)
+
+    print(data)
+    return data
