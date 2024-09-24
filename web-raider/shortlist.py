@@ -2,12 +2,12 @@
 
 import builtins
 
-from .search import GoogleSearch
-from .article import CodeArticle
-from .codebase import Codebase, CodebaseType
-from .url_classifier import url_classifier
-from .model_calls import call_relevance
-from .utils import useless_func
+from search import GoogleSearch
+from article import CodeArticle
+from codebase import Codebase, CodebaseType
+from url_classifier import url_classifier
+from model_calls import call_relevance
+from utils import useless_func
 
 def codebase_shortlist(query: str, verbose: bool = False) -> list[dict]:
     """

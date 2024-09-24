@@ -2,8 +2,8 @@
 
 import builtins
 
-from .utils import useless_func, json_to_table
-from .model_calls import call_pro_con, call_scorer, call_ranker
+from utils import useless_func, json_to_table
+from model_calls import call_pro_con, call_scorer, call_ranker
 
 def codebase_evaluate(query: str, codebases: list[dict], verbose: bool = False) -> list[dict]:
     """
