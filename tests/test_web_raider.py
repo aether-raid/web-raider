@@ -1,16 +1,20 @@
 # tests/test_web_raider.py
 
-from src.pipeline import main
+import asyncio
+from websockets.sync.client import connect
+import json
 
-SAMPLE_QUERY = 'Can you code a VSCode Extension using React?'
+def test():
+    with connect('ws://localhost:11111/ws/dumbass') as websocket:
+        query = 'How do I parse Javascript AST in Python with Tree-Sitter?'
+        message = ({
+            'method': 'query',
+            'params': {'query': query}
+        })
+        
+        websocket.send(json.dumps(message))
+        response = websocket.recv()
+        asyncio.log(response)
 
-QUERY = 'How do I parse Javascript AST in Python with Tree-Sitter?'
-
-# new query for "codebase research problem" according to aloysius
-CODEBASE_QUERY = """
-i specifically want open source alternatives to this:
-
-Flowith is an innovative, canvas-based AI tool designed for content generation and deep work. It allows users to interactively create and organize various types of content, including long texts, code, and images, using a visually intuitive interface.
-"""
-
-main(QUERY)
+if __name__ == '__main__':
+    asyncio.run(test())
