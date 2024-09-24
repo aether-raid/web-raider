@@ -2,7 +2,7 @@
 
 import json
 import pandas as pd
-from .codebase import Codebase
+from codebase import Codebase
 from typing import Any
 
 def json_to_table(json_string: str) -> str:

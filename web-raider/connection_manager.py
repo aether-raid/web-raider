@@ -20,7 +20,7 @@ import argparse
 import uvicorn
 from typing import Any, Dict, List
 from fastapi import WebSocket, WebSocketDisconnect, FastAPI
-from .pipeline import pipeline_main
+from pipeline import pipeline_main
 
 logger = logging.getLogger("ConnectionManager")
 
@@ -183,6 +183,9 @@ class ConnectionManager:
         finally:
             keepalive_task.cancel()
             logger.info("Keepalive task cancelled")
+
+    def ping(self):
+        return 'pong'
 
 def main():
     conn_manager = ConnectionManager()
