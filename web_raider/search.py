@@ -65,8 +65,10 @@ class GoogleSearch:
         None
         """
         self.search_results = list(search(
-                self.query, num_results=self.cap,
-                advanced=True
+                self.query, 
+                num_results=self.cap,
+                advanced=True, 
+                sleep_interval=5
             ))
 
     def get_relevant_urls(self) -> list[str]:
