@@ -88,7 +88,7 @@ class ConnectionManager:
             response = {"result": codebases}
             await self.send_message(websocket, response, session_id)
             await self.send_message(websocket, ConnectionManager.END_OF_MESSAGE_RESPONSE, session_id)
-            logger.info("generate_subtasks result: %s", codebases)
+            logger.info("query result: %s", codebases)
 
         elif method == "shutdown":
             self.agent_managers[session_id].shutdown()
