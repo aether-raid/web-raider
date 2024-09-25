@@ -38,7 +38,7 @@ tox = "^4.11.4"
 ipykernel = "^6.29.5"
 
 [tool.poetry.scripts]
-conn-mann = "web-raider.connection_manager:main"
+web-raider-conn-mann = "web_raider.connection_manager:main"
 
 [build-system]
 requires = ["poetry-core"]
