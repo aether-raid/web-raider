@@ -3,6 +3,8 @@
 from stackapi import StackAPI
 from enum import Enum
 from urllib.parse import urlparse
+from markdownify import markdownify as md
+from .model_calls import call_parser
 
 class ForumType(str, Enum):
     STACKOVERFLOW = "StackOverflow"
@@ -42,7 +44,13 @@ class StackOverflowForum(Forum):
         # filter here to specify that we want the object to be returned along with the body
         # https://stackapps.com/a/3761
         answer = self.SITE.fetch('answers/{ids}', ids=[int(answer_id)], filter='withbody')['items']
-
-        # need to parse the body AHHHHHH
         return answer[0]['body']
     
+    def parse_answer_body(self, answer_body):
+        # parses the html body string into markdown syntax
+        # which according to Prannaya is better accepted by LLMs. lol.
+        parsed_ans = md(answer_body)
+
+        # extract out code snippets
+        tidied_ans = call_parser(parsed_ans)
+        return tidied_ans

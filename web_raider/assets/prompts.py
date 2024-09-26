@@ -135,3 +135,25 @@ class Prompts(str, Enum):
     codebase4
     codebase5
     """
+
+    PARSER_PROMPT = """
+    You are an AI assistant tasked with extracting information from MarkDown text.
+
+    Extract ALL code snippets, along with their descriptions and language in json format like so:
+
+    [
+        {
+            "desc": xxx,
+            "code": xxx,
+            "lang": xxx
+        },
+        {
+            "desc": xxx,
+            "code": xxx,
+            "lang": xxx
+        },
+        ...
+    ]
+
+    Output ONLY the json object without any backticks.
+    """

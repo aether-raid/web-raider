@@ -224,3 +224,24 @@ def call_ranker(scorer: str) -> str:
 
     response = ranker['choices'][0]['message']['content']
     return response
+
+def call_parser(ans_body: str) -> str:
+    parser = litellm.completion(
+        # between azure/gpt-4o and sonnet3.5
+        # after testing it a few times across diff cases seems like azure/gpt-4o is able to pick out the language type better
+        model='azure/gpt-4o',
+        messages = [
+            {
+                'role': 'system',
+                'content': dedent(Prompts.PARSER_PROMPT)
+            },
+            {
+                'role': 'user',
+                'content': f'content: \n\n{ans_body}'
+            }
+        ],
+        temperature=0
+    )
+
+    response = parser['choices'][0]['message']['content']
+    return response
