@@ -1,7 +1,7 @@
 # src/search.py
 
 from googlesearch import search, SearchResult
-from constants import CODE_BLACKLIST
+from .constants import CODE_BLACKLIST
 
 
 class GoogleSearch:

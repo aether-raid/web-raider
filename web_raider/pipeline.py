@@ -1,7 +1,7 @@
-from shortlist import codebase_shortlist
-from evaluate import codebase_evaluate
-from model_calls import call_query_simplifier
-from utils import tidy_results, get_unique_codebases
+from .shortlist import codebase_shortlist
+from .evaluate import codebase_evaluate
+from .model_calls import call_query_simplifier
+from .utils import tidy_results, get_unique_codebases
 import json
 
 def pipeline(query: str, verbose: bool = False) -> list[dict]:

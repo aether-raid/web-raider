@@ -3,8 +3,8 @@
 import litellm
 from textwrap import dedent
 from openai import AzureOpenAI
-from assets.prompts import Prompts
-from assets.key_import import AZURE_ENDPOINT, AZURE_KEY, AZURE_MODEL, AZURE_API_VERSION
+from .assets.prompts import Prompts
+from .assets.key_import import AZURE_ENDPOINT, AZURE_KEY, AZURE_MODEL, AZURE_API_VERSION
 
 client = AzureOpenAI(
     azure_endpoint=AZURE_ENDPOINT,
