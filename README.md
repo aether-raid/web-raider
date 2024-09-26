@@ -44,13 +44,14 @@ Run `pip install -e .` from the git root directory. Raider Backend will call Web
   - **__init__.py**: Initializes the assets package.
 - **tests/**: Contains unit tests for the application. Run the tests using `pytest` to ensure everything is working correctly.
 
-## Tasklist to complete before Wallaby
+## To Fix
 
-1. fix relative/absolute import problem. don't rely on `-m`
-2. need to be able to run the code from any directory
+- Too many search requests will lead to `429 Error`. Look into ways to circumvent it.
 
 ## Future Implementations/Improvements
 
+- Implement Chain of Thought to break initial query down into subqueries.
+  - Could use DSPy.
 - Use Machine Learning Classification Algorithms to classify types of URLs to their type (Codebase, Article, Forum)
 - Find a way to handle Forum URLs (right now they are not processed)
 - Find a way to scrape code directly from Articles and Forum URLs (right now only links are scraped)
