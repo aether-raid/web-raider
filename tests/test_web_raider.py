@@ -4,9 +4,9 @@ import asyncio
 from websockets.sync.client import connect
 import json
 
-def test():
+def main():
     with connect('ws://localhost:11111/ws/dumbass') as websocket:
-        query = 'How do I parse Javascript AST in Python with Tree-Sitter?'
+        query = 'Python package to deduce code snippet language'
         message = ({
             'method': 'query',
             'params': {'query': query}
@@ -14,7 +14,7 @@ def test():
         
         websocket.send(json.dumps(message))
         response = websocket.recv()
-        print(response)
+        asyncio.log(response)
 
 if __name__ == '__main__':
-    asyncio.run(test())
+    asyncio.run(main())
