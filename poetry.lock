@@ -3806,6 +3806,21 @@ pure-eval = "*"
 tests = ["cython", "littleutils", "pygments", "pytest", "typeguard"]
 
 [[package]]
+name = "stackapi"
+version = "0.3.1"
+description = "Library for interacting with the Stack Exchange API"
+optional = false
+python-versions = "*"
+files = [
+    {file = "StackAPI-0.3.1-py3-none-any.whl", hash = "sha256:cd60fdd5cdaa1767967a27dbaeb6fa3bbb297d3d457ffed2e4087bddf792843b"},
+    {file = "stackapi-0.3.1.tar.gz", hash = "sha256:0bcb0a40275a69f737f1d824f9712ccec73bc8b46f06720ebb722f3c561ad6b0"},
+]
+
+[package.dependencies]
+requests = "*"
+six = "*"
+
+[[package]]
 name = "starlette"
 version = "0.38.5"
 description = "The little ASGI library that shines."
@@ -4704,4 +4719,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "edc564966f04062c4222e105fc2cf5de35d65b4027e0cdf478f28f80ef93c1a5"
+content-hash = "b63035037762c224909bbaa548a97b76748e316031b77e9cf026c9ec8f7a441b"
