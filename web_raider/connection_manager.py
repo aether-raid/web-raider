@@ -20,7 +20,7 @@ import argparse
 import uvicorn
 from typing import Any, Dict, List
 from fastapi import WebSocket, WebSocketDisconnect, FastAPI
-from pipeline import pipeline_main
+from .pipeline import pipeline_main
 
 logger = logging.getLogger("ConnectionManager")
 
@@ -29,7 +29,8 @@ class ConnectionManager:
     """
     Manages WebSocket connections and message buffering.
     """
-    END_OF_MESSAGE_RESPONSE = {"<END_OF_MESSAGE>": "<END_OF_MESSAGE>"}
+    END_OF_MESSAGE_RESPONSE = {"<END_OF_MESSAGE>": ""}
+    KEEP_ALIVE_PING = {"<PING>": ""}
 
     def __init__(self) -> None:
         """
@@ -145,7 +146,7 @@ class ConnectionManager:
         """
         while True:
             await asyncio.sleep(10)  # Adjust the interval as needed
-            await self.send_message(websocket, {"ping": "keepalive"}, session_id)
+            await self.send_message(websocket, self.KEEP_ALIVE_PING, session_id)
             logger.debug("Sent keepalive ping")
 
     async def websocket_endpoint(

@@ -13,6 +13,10 @@ Web Raider is a powerful web scraping and data extraction tool designed to help 
     - `poetry lock` (creates venv for you)
     - `poetry install`
 
+### Setup for Raider Backend
+
+Run `pip install -e .` from the git root directory. Raider Backend will call Web Raider using `pipeline_main(user_query: str)` from `web_raider/pipeline.py`.
+
 ## Usage
 
 1. Configure your scraping tasks by editing the configuration files in the `config` directory.

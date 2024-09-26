@@ -2,8 +2,8 @@
 
 from newspaper import Article
 from typing import Generator
-from codebase import Codebase
-from url_classifier import url_classifier
+from .codebase import Codebase
+from .url_classifier import url_classifier
 
 class CodeArticle(Article):
     def __init__(self, url: str, download: bool = True, parse: bool = True):
