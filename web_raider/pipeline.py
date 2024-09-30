@@ -42,15 +42,18 @@ def pipeline_main(user_query: str) -> list[dict]:
         a list of dictionaries containing information about the final evaluated code snippets.
     """
     potential_codebases = []
+    code_snippets = []
 
     # pipeline(QUERY, True)
     queries = call_query_simplifier(user_query)
     queries = json.loads(queries)
 
     for query in queries['prompts']:
-        potential_codebases.extend(pipeline(query, True))
+        cb, cs = pipeline(query, True)
+        potential_codebases.extend(cb)
+        code_snippets.append(cs)
 
-    final_codebases, code_snippets = codebase_evaluate(user_query, get_unique_codebases(potential_codebases), True)
+    final_codebases = codebase_evaluate(user_query, get_unique_codebases(potential_codebases), True)
     final_results = tidy_results(final_codebases)
     data = json.dumps(final_results)
 

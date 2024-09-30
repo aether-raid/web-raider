@@ -14,7 +14,7 @@ def main():
         
         websocket.send(json.dumps(message))
         response = websocket.recv()
-        asyncio.log(response)
+        print(response)
 
 if __name__ == '__main__':
     asyncio.run(main())

@@ -100,13 +100,15 @@ def codebase_shortlist(query: str, verbose: bool = False) -> list[dict]:
                         codebases.append(codebase)
 
         elif url_classifier(url) == 'Forum':
+            print(f'Checking forum from {url}')
             object = Forum(url)
-            object.get_answer_ids
-            object.parse_all_answers    # relevance has been checked for already
+            object.get_answer_ids()
+            all_answers = object.parse_all_answers(query)    # relevance has been checked for already
+            print('HELLO HELLO', all_answers)
 
             code_snippets.append({
-                'url': object.url,
-                'code_snippets': object.tidied_ans
+                'url': url,
+                'code_snippets': all_answers
             })
             
         else:

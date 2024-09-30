@@ -147,14 +147,13 @@ class StackOverflowForum(Forum):
         user_query : str
             The user's query.
         """
-        # parallel array with self.answer_ids, so the same index corresponds to the ans_id - answer body pair
-        self.tidied_ans = {}
+        all_ans = {}
 
         for ans_id in self.answer_ids:
             tidied_ans = self.parse_answer_body(self.get_answer_body(ans_id))
             if self.is_relevant(user_query, tidied_ans):
                 logger.info(f'{ans_id} is relevant!')
-                self.tidied_ans[ans_id] = json.loads(tidied_ans)
+                all_ans[ans_id] = json.loads(tidied_ans)
 
                 # if len(self.tidied_ans) == self.cap:
                 #     break
