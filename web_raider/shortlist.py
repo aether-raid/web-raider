@@ -37,6 +37,7 @@ def codebase_shortlist(query: str, verbose: bool = False) -> list[dict]:
     print(f'Found {len(results)} relevant results!')
 
     codebases = []
+    code_snippets = []
     seen_urls = set()
 
     for url in results:
@@ -101,13 +102,16 @@ def codebase_shortlist(query: str, verbose: bool = False) -> list[dict]:
         elif url_classifier(url) == 'Forum':
             object = Forum(url)
             object.get_answer_ids
-            object.parse_all_answers
+            object.parse_all_answers    # relevance has been checked for already
 
-            # relevance has been checked for already
+            code_snippets.append({
+                'url': object.url,
+                'code_snippets': object.tidied_ans
+            })
             
         else:
             continue
         
-    print(f'Found {len(codebases)} codebases!')
+    print(f'Found {len(codebases)} codebases and {len(code_snippets)} sets of code snippets!')
 
-    return codebases
+    return codebases, code_snippets

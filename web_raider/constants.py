@@ -7,7 +7,7 @@ __all__ = [
 # combining this with site:xxxxxxx, once we figure out how to extract code snippets efficiently
 # this can become a reference point to narrow down searches
 CODE_BLACKLIST = {
-    "stackoverflow.com",
+    # "stackoverflow.com",
     "quora.com",
     "tutorialspoint.com",
     "w3schools.com",

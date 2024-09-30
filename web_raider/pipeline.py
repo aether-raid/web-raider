@@ -17,13 +17,14 @@ def pipeline(query: str, verbose: bool = False) -> list[dict]:
 
     Returns
     -------
-    list[dict]
-        A list of dictionaries containing information about the evaluated codebases.
+    tuple(list[dict], list[dict])
+        A tuple containing a list of dictionaries containing information about the evaluated codebases and 
+        a list of dictionaries containing information about the evaluated code snippets.
     """
-    codebases = codebase_shortlist(query, verbose)
+    codebases, code_snippets = codebase_shortlist(query, verbose)
     desired_info = codebase_evaluate(query, codebases, verbose)
 
-    return desired_info
+    return desired_info, code_snippets
 
 def pipeline_main(user_query: str) -> list[dict]:
     """
@@ -36,8 +37,9 @@ def pipeline_main(user_query: str) -> list[dict]:
 
     Returns
     -------
-    list[dict]
-        A list of dictionaries containing information about the final evaluated codebases.
+    tuple(list[dict], list[dict])
+        A tuple containing a list of dictionaries containing information about the final evaluated codebases and
+        a list of dictionaries containing information about the final evaluated code snippets.
     """
     potential_codebases = []
 
@@ -48,9 +50,8 @@ def pipeline_main(user_query: str) -> list[dict]:
     for query in queries['prompts']:
         potential_codebases.extend(pipeline(query, True))
 
-    final_codebases = codebase_evaluate(user_query, get_unique_codebases(potential_codebases), True)
+    final_codebases, code_snippets = codebase_evaluate(user_query, get_unique_codebases(potential_codebases), True)
     final_results = tidy_results(final_codebases)
     data = json.dumps(final_results)
 
-    print(data)
-    return data
+    return data, code_snippets
