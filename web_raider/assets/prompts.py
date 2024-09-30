@@ -157,3 +157,11 @@ class Prompts(str, Enum):
 
     Output ONLY the json object without any backticks.
     """
+
+    SNIPPET_RELEVANCE_PROMPT = """
+    You are a software developer. You are tasked with determining whether a code snippet is relevant to your user's query.
+    
+    You will be given the user's query, as well as a list of json objects with the description, code snippet and language of the snippet.
+
+    Output ONLY True or False, where True means the snippets are relevant and False means otherwise.
+    """

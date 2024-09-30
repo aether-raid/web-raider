@@ -59,3 +59,4 @@ Run `pip install -e .` from the git root directory. Raider Backend will call Web
   - For Forum
     - context check (whether the text explanation around the code is relevant to my original query)
     - code eval (whether the code snippet is relevant to the prompt)
+- In `forums.py` `StackOverflowForum.parse_answer_body`, consider using `guesslang` to guess the language of the code snippet. Best case scenario is to pivot away from too many LLM calls.

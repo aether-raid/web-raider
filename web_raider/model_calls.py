@@ -245,3 +245,21 @@ def call_parser(ans_body: str) -> str:
 
     response = parser['choices'][0]['message']['content']
     return response
+
+def call_snippet_relevance(user_query: str, tidied_ans: str) -> str:
+    snip_rel = litellm.completion(
+        model='sonnet-3.5',
+        messages = [
+            {
+                'role': 'system',
+                'content': dedent(Prompts.SNIPPET_RELEVANCE_PROMPT)
+            },
+            {
+                'role': 'user',
+                'content': f'code snippet information:\n{tidied_ans}\n\nuser query: {user_query}'
+            }
+        ]
+    )
+
+    response = snip_rel['choices'][0]['message']['content']
+    return response

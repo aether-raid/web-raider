@@ -10,13 +10,13 @@ def main():
     logging.info('Test Started')
 
     TEST_URL = "https://stackoverflow.com/questions/11875770/how-can-i-overcome-datetime-datetime-not-json-serializable?rq=2"
-    TEST_ID = 11875813
     forum = Forum(TEST_URL)
-    print(forum.get_answer_body(TEST_ID))
-    ans = forum.parse_answer_body(forum.get_answer_body(TEST_ID))
+    forum.get_answer_ids()
+    logging.info(forum.answer_ids)
+    forum.parse_all_answers('python datetime')
 
-    logger.info(type(ans))
-    logger.info(ans)
+    logger.info(type(forum.tidied_ans))
+    logger.info(forum.tidied_ans)
 
     logger.info('Done')
 

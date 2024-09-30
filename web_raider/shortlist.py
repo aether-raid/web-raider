@@ -5,6 +5,7 @@ import builtins
 from .search import GoogleSearch
 from .article import CodeArticle
 from .codebase import Codebase, CodebaseType
+from .forums import Forum
 from .url_classifier import url_classifier
 from .model_calls import call_relevance
 from .utils import useless_func
@@ -98,9 +99,12 @@ def codebase_shortlist(query: str, verbose: bool = False) -> list[dict]:
                         codebases.append(codebase)
 
         elif url_classifier(url) == 'Forum':
-            pass
-            # object = CodeForum(url)
+            object = Forum(url)
+            object.get_answer_ids
+            object.parse_all_answers
 
+            # relevance has been checked for already
+            
         else:
             continue
         
