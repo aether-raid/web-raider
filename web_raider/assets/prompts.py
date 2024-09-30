@@ -16,7 +16,12 @@ class Prompts(str, Enum):
         A prompt to score the relevance of codebases to a user-provided query.
     PRO_CON_PROMPT: str
         A prompt to list the pros and cons of codebases in the context of a user-provided query.
-    A class to map prompt types to their actual prompts.
+    RANKER_PROMPT: str
+        A prompt to rank the different codebases based on their scores.
+    PARSER_PROMPT: str
+        A prompt to extract information from Markdown Text and return results in a specific format.
+    SNIPPET_RELEVANCE_PROMPT: str
+        A prompt to determine whether a code snippet is relevant to a user query.
     """
 
     QUERY_PROMPT = """

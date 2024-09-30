@@ -18,6 +18,19 @@ litellm.model_alias_map = {
 }
 
 def call_query_simplifier(query: str) -> str:
+    """
+    Simplifies a user query using the litellm model.
+
+    Parameters
+    ----------
+    query : str
+        The user's query to be simplified.
+
+    Returns
+    -------
+    str
+        The simplified query.
+    """
     # simplifier = client.chat.completions.create(
     #     model=AZURE_MODEL,
     #     messages = [
@@ -54,7 +67,19 @@ def call_query_simplifier(query: str) -> str:
     return response
 
 def consolidate_codebases_info(codebases: list[dict]) -> str:
-    """Helper function to help consolidate information about codebases"""
+    """
+    Consolidates information about codebases into a single string.
+
+    Parameters
+    ----------
+    codebases : list[dict]
+        A list of dictionaries containing codebase information.
+
+    Returns
+    -------
+    str
+        A consolidated string of codebase information.
+    """
     codebases_info = ''
 
     for i in range(len(codebases)):
@@ -72,6 +97,21 @@ def consolidate_codebases_info(codebases: list[dict]) -> str:
     return codebases_info
 
 def call_relevance(codebases: list[dict], query: str) -> str:
+    """
+    Determines the relevance of codebases to a user query using the litellm model.
+
+    Parameters
+    ----------
+    codebases : list[dict]
+        A list of dictionaries containing codebase information.
+    query : str
+        The user's query.
+
+    Returns
+    -------
+    str
+        The relevance information.
+    """
     codebases_info = consolidate_codebases_info(codebases)
 
     # response_format = json.dumps({
@@ -130,6 +170,21 @@ def call_relevance(codebases: list[dict], query: str) -> str:
 
 def call_pro_con(codebases: list[dict], query: str) -> str:
     """
+    Determines the pros and cons of codebases in relation to a user query using the AzureOpenAI model.
+
+    Parameters
+    ----------
+    codebases : list[dict]
+        A list of dictionaries containing codebase information.
+    query : str
+        The user's query.
+
+    Returns
+    -------
+    str
+        The pros and cons information.
+    """
+    """
     Note: Somehow, only when the AzureOpenAI model is used can the json string be outputted correctly.
     """
     codebases_info = consolidate_codebases_info(codebases)
@@ -170,6 +225,23 @@ def call_pro_con(codebases: list[dict], query: str) -> str:
     return response
 
 def call_scorer(codebases: list[dict], query: str, pro_con: str) -> str:
+    """
+    Scores the codebases based on the user's query and pros/cons information using the litellm model.
+
+    Parameters
+    ----------
+    codebases : list[dict]
+        A list of dictionaries containing codebase information.
+    query : str
+        The user's query.
+    pro_con : str
+        The pros and cons information.
+
+    Returns
+    -------
+    str
+        The scoring information.
+    """
     codebases_info = consolidate_codebases_info(codebases)
 
     # scorer = client.chat.completions.create(
@@ -207,6 +279,19 @@ def call_scorer(codebases: list[dict], query: str, pro_con: str) -> str:
     return response
 
 def call_ranker(scorer: str) -> str:
+    """
+    Ranks the codebases based on the scoring information using the litellm model.
+
+    Parameters
+    ----------
+    scorer : str
+        The scoring information.
+
+    Returns
+    -------
+    str
+        The ranking information.
+    """
     ranker = litellm.completion(
     model="sonnet-3",
     messages = [
@@ -226,6 +311,19 @@ def call_ranker(scorer: str) -> str:
     return response
 
 def call_parser(ans_body: str) -> str:
+    """
+    Parses the answer body to extract relevant information using the litellm model.
+
+    Parameters
+    ----------
+    ans_body : str
+        The body of the answer.
+
+    Returns
+    -------
+    str
+        The parsed information.
+    """
     parser = litellm.completion(
         # between azure/gpt-4o and sonnet3.5
         # after testing it a few times across diff cases seems like azure/gpt-4o is able to pick out the language type better
@@ -247,6 +345,21 @@ def call_parser(ans_body: str) -> str:
     return response
 
 def call_snippet_relevance(user_query: str, tidied_ans: str) -> str:
+    """
+    Determines the relevance of code snippets to a user query using the litellm model.
+
+    Parameters
+    ----------
+    user_query : str
+        The user's query.
+    tidied_ans : str
+        The tidied answer containing code snippets.
+
+    Returns
+    -------
+    str
+        The relevance information.
+    """
     snip_rel = litellm.completion(
         model='sonnet-3.5',
         messages = [
