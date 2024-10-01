@@ -157,3 +157,5 @@ class StackOverflowForum(Forum):
 
                 # if len(self.tidied_ans) == self.cap:
                 #     break
+
+        return all_ans
