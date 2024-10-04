@@ -17,27 +17,28 @@ class CodeArticle(Article):
     # to a certain extent
     def code_urls(self, search_depth=1) -> Generator[Codebase, None, None]:
         results = set()
-        for elem, key, url, _ in self.clean_top_node.iterlinks():
-            if elem.tag != "a":
-                continue
-            assert key == "href"
-            
-            if Codebase.is_code(url):
-                codebase = Codebase(url)
-                if codebase.repository_url not in results:
-                    yield codebase
-                    results.add(codebase.repository_url)
+        if self.clean_top_node is not None:
+            for elem, key, url, _ in self.clean_top_node.iterlinks():
+                if elem.tag != "a":
+                    continue
+                assert key == "href"
+                
+                if Codebase.is_code(url):
+                    codebase = Codebase(url)
+                    if codebase.repository_url not in results:
+                        yield codebase
+                        results.add(codebase.repository_url)
 
-            # can change search_depth limit depending on how deep we want to go
-            
-            # update as of 190924 search_depth = 3 just digs extremely deep but results
-            # are not good either
-            elif url_classifier(url) and search_depth < 2:
-                try:
-                    article = CodeArticle(url)
-                    for codebase in article.code_urls(search_depth=search_depth+1):
-                        if codebase.repository_url not in results:
-                            yield codebase
-                            results.add(codebase.repository_url)
-                except:
-                    pass
+                # can change search_depth limit depending on how deep we want to go
+                
+                # update as of 190924 search_depth = 3 just digs extremely deep but results
+                # are not good either
+                elif url_classifier(url) and search_depth < 2:
+                    try:
+                        article = CodeArticle(url)
+                        for codebase in article.code_urls(search_depth=search_depth+1):
+                            if codebase.repository_url not in results:
+                                yield codebase
+                                results.add(codebase.repository_url)
+                    except:
+                        pass
