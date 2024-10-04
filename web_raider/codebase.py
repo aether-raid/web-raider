@@ -23,11 +23,11 @@ class CodebaseType(str, Enum):
     GITEE: str
         represents Gitee
     """
-    GITHUB = "GitHub"
-    GITLAB = "GitLab"
-    BITBUCKET = "BitBucket"
+    GITHUB = "github"
+    GITLAB = "gitlab"
+    BITBUCKET = "bitbucket"
     # SOURCEFORGE = "SourceForge"
-    GITEE = "Gitee"
+    GITEE = "gitee"
 
     @classmethod
     def format_type(cls, codebase_type: 'CodebaseType') -> str:
