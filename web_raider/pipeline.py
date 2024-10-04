@@ -43,6 +43,7 @@ def pipeline_main(user_query: str) -> list[dict]:
     """
     potential_codebases = []
     code_snippets = []
+    seen_cs_urls = set()
 
     # pipeline(QUERY, True)
     queries = call_query_simplifier(user_query)
@@ -51,10 +52,20 @@ def pipeline_main(user_query: str) -> list[dict]:
     for query in queries['prompts']:
         cb, cs = pipeline(query, True)
         potential_codebases.extend(cb)
-        code_snippets.append(cs)
+        for code_snip in cs:
+            if code_snip['url'] not in seen_cs_urls:
+                code_snippets.append(code_snip)
+                seen_cs_urls.add(code_snip['url'])
 
     final_codebases = codebase_evaluate(user_query, get_unique_codebases(potential_codebases), True)
     final_results = tidy_results(final_codebases)
-    data = json.dumps(final_results)
 
-    return data, code_snippets
+    print(final_codebases)
+    print(final_results)
+
+    data = {
+        'codebases': final_results,
+        'snippets': code_snippets
+    }
+
+    return json.dumps(data)

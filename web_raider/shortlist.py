@@ -104,7 +104,6 @@ def codebase_shortlist(query: str, verbose: bool = False) -> list[dict]:
             object = Forum(url)
             object.get_answer_ids()
             all_answers = object.parse_all_answers(query)    # relevance has been checked for already
-            print('HELLO HELLO', all_answers)
 
             code_snippets.append({
                 'url': url,
