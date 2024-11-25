@@ -25,7 +25,7 @@ def codebase_shortlist(query: str, verbose: bool = False) -> list[dict]:
     list[dict]
         A list of dictionaries containing information about the shortlisted codebases.
     """
-    print = builtins.print if verbose else useless_func
+    #print = builtins.print if verbose else useless_func
 
     print(f'Searching Google with: "{query}"')
 
@@ -39,6 +39,7 @@ def codebase_shortlist(query: str, verbose: bool = False) -> list[dict]:
     seen_urls = set()
 
     for url in results:
+        print("analysing", url)
         if url in seen_urls:
             continue
 

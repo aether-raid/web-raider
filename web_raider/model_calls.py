@@ -2,20 +2,20 @@
 
 import litellm
 from textwrap import dedent
-from openai import AzureOpenAI
+from openai import OpenAI
 from .assets.prompts import Prompts
-from .assets.key_import import AZURE_ENDPOINT, AZURE_KEY, AZURE_MODEL, AZURE_API_VERSION
+#from .assets.key_import import AZURE_ENDPOINT, AZURE_KEY, AZURE_MODEL, AZURE_API_VERSION
 
-client = AzureOpenAI(
+'''client = AzureOpenAI(
     azure_endpoint=AZURE_ENDPOINT,
     api_version=AZURE_API_VERSION,
     api_key=AZURE_KEY
-)
+)'''
 
-litellm.model_alias_map = {
+'''litellm.model_alias_map = {
     'sonnet-3': 'anthropic.claude-3-sonnet-20240229-v1:0',
     'sonnet-3.5': 'anthropic.claude-3-5-sonnet-20240620-v1:0'
-}
+}'''
 
 def call_query_simplifier(query: str) -> str:
     # simplifier = client.chat.completions.create(
@@ -33,9 +33,15 @@ def call_query_simplifier(query: str) -> str:
     #     temperature=0,
     #     # response_format=response_format
     # )
+    client = OpenAI(
+        base_url= "http://localhost:11434/v1/",
+
+
+        api_key = 'ollama'
+    )
 
     litellm_simplifier = litellm.completion(
-    model="sonnet-3",
+    model="llama2",
     messages = [
             {
                 'role': 'system',
@@ -110,7 +116,7 @@ def call_relevance(codebases: list[dict], query: str) -> str:
     # )
 
     litellm_relevance = litellm.completion(
-    model="sonnet-3",
+    model="llama2",
     messages = [
             {
                 'role': 'system',
@@ -135,7 +141,7 @@ def call_pro_con(codebases: list[dict], query: str) -> str:
     codebases_info = consolidate_codebases_info(codebases)
 
     pro_con = client.chat.completions.create(
-        model=AZURE_MODEL,
+        model='llama2',
         messages = [
             {
                 'role': 'system',
@@ -188,7 +194,7 @@ def call_scorer(codebases: list[dict], query: str, pro_con: str) -> str:
     # )
 
     litellm_scorer = litellm.completion(
-    model="sonnet-3.5",
+    model="llama2",
     messages = [
             {
                 'role': 'system',
@@ -208,7 +214,7 @@ def call_scorer(codebases: list[dict], query: str, pro_con: str) -> str:
 
 def call_ranker(scorer: str) -> str:
     ranker = litellm.completion(
-    model="sonnet-3",
+    model="llama2",
     messages = [
             {
                 'role': 'system',

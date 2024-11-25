@@ -1,4 +1,4 @@
-# assets/key_import.py
+'''# assets/key_import.py
 
 import os
 
@@ -14,4 +14,4 @@ AWS_SECRET_ACCESS_KEY = os.environ['AWS_SECRET_ACCESS_KEY']
 AWS_REGION_NAME = os.environ['AWS_REGION_NAME']
 
 # Codebase Keys
-GITHUB_TOKEN = os.environ['GITHUB_TOKEN']
+GITHUB_TOKEN = os.environ['GITHUB_TOKEN']'''
