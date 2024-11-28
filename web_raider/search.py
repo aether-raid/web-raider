@@ -32,7 +32,7 @@ class GoogleSearch:
     """
     
     def __init__(self, query: str,
-                 num_results: int = 20,
+                 num_results: int = 10,
                  blacklist: list[str] = CODE_BLACKLIST):
         """
         Constructs all the necessary attributes for the GoogleSearch object.

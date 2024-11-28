@@ -10,13 +10,37 @@ from pydantic import BaseModel, HttpUrl
 from typing import List, Optional
 import json
 import html
+from openai import OpenAI
+
+client = OpenAI(
+    base_url= "http://localhost:11434/v1/",
+
+
+    api_key = 'ollama'
+)
+
+def llamas(prompt):
+    chat_completion = client.chat.completions.create(
+        messages =[
+            {
+                'role': 'user',
+                'content': f'rephrase the question "{prompt}" and only produce the rephrased question with nothing else',
+
+            }
+        ],
+        model = 'llama2',
+    )
+
+    #rephrased_question = chat_completion['choices'][0]['message']['content']
+        
+    return chat_completion
 
 def classifier(results):
     codebases = []
     seen_urls = set()
 
     for url in results:
-        print("analysing", url)
+        #print("analysing", url)
         if url in seen_urls:
             continue
 
@@ -69,7 +93,7 @@ def get_html_content(url :str):
             return 0
         
 path = "C:\\Users\\65881\\Downloads\\questions.jsonl\\questions.jsonl"
-limit = 100
+limit = 5
 lines = []
 with open(path, "r") as file:
     for i in range(limit):
@@ -83,6 +107,7 @@ class Question(BaseModel):
     Repos: List[str]
     Title: str
     Body: str
+
 ans_title_repo = {}
 for line in lines:
     json_data = json.loads(line)
@@ -93,8 +118,11 @@ title_repo = {}
 
 for line in lines:
     json_data = json.loads(line)
-    question = Question(**json_data)
-    results = search(question.Title, True)
+    org_question = Question(**json_data)
+    print("Original question: ", org_question.Title)
+    rep_question = llamas(org_question.Title)
+    print("Rephrased question: ", rep_question.choices[0].message.content)
+    results = search(rep_question.choices[0].message.content, num_results=10)
     print(results)
 
     link_list = []
@@ -106,9 +134,9 @@ for line in lines:
     links = []
     for link in link_list:
         links += classifier(link)
-
+############################################
     links += classifier(results)
-    title_repo[question.Title] = links
+    title_repo[org_question.Title] = links
 
 test = title_repo
 ans = ans_title_repo
@@ -121,5 +149,7 @@ for key in ans.keys():
             pass_rate += 1
         else:
             print()
-
+for v in test.values():
+    for l in v:
+        print(v)
 print(pass_rate/limit)
