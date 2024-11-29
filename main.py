@@ -301,7 +301,7 @@ def process_questions(path: str, limit: int = 5):
 
     return title_repo, ans_title_repo
 
-def analyze_similarity_and_extract_links(question: str, processed_content: dict, top_k: int = 5):
+def analyze_similarity_and_extract_links(question: str, processed_content: dict, top_k: int = 25):
     """
     Analyze chunk similarity using LSA and extract codebase links from top chunks.
     
@@ -383,64 +383,171 @@ def create_candidate_list(classified_links: dict, analysis_results: dict) -> dic
     # Count in top chunks
     for chunk in analysis_results['top_chunks']:
         for link in chunk['found_codebase_links']:
-            link_counts[link] += 1
+            normalized_link = normalize_github_url(link)
+            link_counts[normalized_link] += 1        
     
-    # Sort links by occurrence count
-    sorted_candidates = [
-        {
-            'url': link,
-            'occurrences': count
-        }
-        for link, count in link_counts.most_common()
-    ]
-    
+    unique_links = set()
+    sorted_candidates = []
+
+    for link, count in link_counts.most_common():
+        normalized_link = normalize_github_url(link)
+        if normalized_link not in unique_links:
+            unique_links.add(normalized_link)
+            sorted_candidates.append({
+                'url': normalized_link,
+                'occurrences': count
+            })
+
     return sorted_candidates
 
-def rerank_candidates_with_llm(question: str, candidates: List[dict], known_repos: List[str]) -> List[dict]:
-    """Re-rank candidate links using LLM evaluation."""
-    # Simpler prompt to reduce JSON parsing errors
-    evaluation_prompt = f"""
-    Analyze these GitHub repositories for the question: "{question}"
-    Return scoring in this exact JSON format:
-    {{"rankings": [
-        {{"url": "[repo_url]", "score": [0-10], "reasoning": "[explanation]"}}
-    ]}}
+def normalize_github_url(url: str) -> str:
+    """Normalize GitHub URLs to a standard format."""
+    url = url.lower().strip('/')
+    # Remove .git extension
+    url = re.sub(r'\.git$', '', url)
+    # Remove http/https prefix
+    url = re.sub(r'^https?://', '', url)
+    # Remove www.
+    url = re.sub(r'^www\.', '', url)
+    # Standardize github.com format
+    url = re.sub(r'github\.com/', 'github.com/', url)
+    return url
 
+def get_repo_content(url: str, max_files: int = 5) -> str:
+    """Extract relevant content from repository."""
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        response = requests.get(url, headers=headers, timeout=15)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        content_summary = []
+        
+        # Get repository description
+        description = soup.find('p', {'class': 'f4 my-3'})
+        if description:
+            content_summary.append(f"Description: {description.get_text().strip()}")
+
+        # Get README content
+        readme = soup.find('article', {'class': 'markdown-body'})
+        if readme:
+            content_summary.append(f"README: {readme.get_text()[:1000]}")  # Limit README length
+
+        # Get code files
+        code_elements = soup.find_all(['pre', 'div'], class_=['highlight', 'blob-code'])
+        files_added = 0
+        for elem in code_elements:
+            if files_added >= max_files:
+                break
+            code = elem.get_text().strip()
+            if len(code) > 50:  # Skip very small snippets
+                content_summary.append(f"Code Sample {files_added + 1}:\n{code[:500]}")
+                files_added += 1
+
+        return "\n\n".join(content_summary)
+    except Exception as e:
+        print(f"Error extracting content from {url}: {e}")
+        return ""
+    
+def rerank_candidates_with_llm(question: str, candidates: List[dict], known_repos: List[str], max_candidates: int = 5) -> List[dict]:
+    """
+    Re-rank candidate links using LLM based on repository content.
+    
+    Args:
+        question: Original question
+        candidates: List of candidate repository links with occurrence counts
+        known_repos: List of known correct repositories
+        max_candidates: Maximum number of candidates to analyze
+    """
+    # Get content for top candidates
+    candidates_with_content = []
+    for candidate in candidates[:max_candidates]:
+        content = get_repo_content(candidate['url'])
+        if content:
+            candidates_with_content.append({
+                'url': candidate['url'],
+                'content': content,
+                'occurrences': candidate['occurrences']
+            })
+
+    if not candidates_with_content:
+        return candidates
+
+    # Prepare evaluation prompt
+    evaluation_prompt = f"""
+    Question: {question}
+    
+    Rate these GitHub repositories for their relevance and solution quality.
+    Consider:
+    1. Direct relevance to the question
+    2. Code quality and implementation
+    3. Documentation clarity
+    4. Solution completeness
+    
+    Rate each repository from 0-10 and explain why.
+    
     Repositories to evaluate:
-    {[cand['url'] for cand in candidates]}
+    
+    {"="*50}
+    """ + "\n\n".join([
+        f"Repository: {repo['url']}\n\nContent:\n{repo['content']}\n{'='*50}"
+        for repo in candidates_with_content
+    ]) + """
+    
+    Format your response exactly like this:
+    {
+        "rankings": [
+            {
+                "url": "repository_url",
+                "score": score_number,
+                "reasoning": "explanation"
+            }
+        ]
+    }
     """
     
     try:
+        # Get LLM evaluation
         evaluation = llamas(evaluation_prompt)
-        response_text = evaluation.choices[0].message.content.strip()
+        eval_data = json.loads(evaluation.choices[0].message.content.strip())
         
-        # Clean response text for better JSON parsing
-        if not response_text.startswith('{'): 
-            response_text = '{' + response_text.split('{', 1)[1]
-        response_text = response_text.replace('\n', ' ').replace('\\', '')
-        
-        eval_data = json.loads(response_text)
-        
-        # Update scores
+        # Update all candidates with scores
         for candidate in candidates:
-            for ranking in eval_data.get('rankings', []):
-                if ranking['url'] in candidate['url']:  # More flexible matching
-                    candidate['llm_score'] = float(ranking.get('score', 0))
-                    candidate['reasoning'] = ranking.get('reasoning', 'No reasoning provided')
-                    candidate['combined_score'] = candidate['llm_score'] * np.log(candidate['occurrences'] + 1)
-                    break
+            matching_rank = next(
+                (r for r in eval_data['rankings'] 
+                 if normalize_github_url(r['url']) == normalize_github_url(candidate['url'])),
+                None
+            )
+            
+            if matching_rank:
+                candidate['llm_score'] = float(matching_rank['score'])
+                candidate['reasoning'] = matching_rank['reasoning']
+                # Combined score considers both LLM score and occurrence count
+                candidate['combined_score'] = (
+                    candidate['llm_score'] * np.log(candidate['occurrences'] + 1)
+                )
             else:
+                # Keep candidates that weren't evaluated but with lower priority
                 candidate['llm_score'] = 0
                 candidate['reasoning'] = "Not evaluated"
-                candidate['combined_score'] = 0
+                candidate['combined_score'] = np.log(candidate['occurrences'] + 1)
         
+        # Sort by combined score
         return sorted(candidates, key=lambda x: x.get('combined_score', 0), reverse=True)
+        
     except Exception as e:
         print(f"LLM ranking failed: {str(e)}")
-        return candidates
-
+        # Fall back to occurrence-based ranking
+        for candidate in candidates:
+            candidate['combined_score'] = candidate['occurrences']
+        return sorted(candidates, key=lambda x: x['occurrences'], reverse=True)
+    
 def extract_code_from_repo(url: str) -> dict:
-    """Extract code from repository URL."""
+    """
+    Extract code from repository URL.
+    Handles different repository platforms (GitHub, GitLab, etc.)
+    """
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -451,10 +558,12 @@ def extract_code_from_repo(url: str) -> dict:
         
         code_blocks = []
         
-        # Find code elements with expanded selectors
+        # Find code elements
         if 'github.com' in url.lower():
+            # GitHub specific extraction
             code_elements = soup.find_all(['pre', 'div'], class_=['highlight', 'highlight-source', 'blob-code', 'js-file-line'])
         else:
+            # Generic code extraction
             code_elements = soup.find_all(['pre', 'code', 'div'], class_=['code', 'snippet', 'source'])
             
         for element in code_elements:
