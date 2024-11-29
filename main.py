@@ -500,74 +500,73 @@ def extract_from_top_candidates(ranked_candidates: List[dict], k: int = 3) -> Li
 def evaluate_model_accuracy(results: dict, known_repos: dict) -> dict:
     """
     Evaluate model accuracy by comparing found repositories with known repositories.
-    
-    Args:
-        results: Dictionary containing processed results for each question
-        known_repos: Dictionary containing known repositories for each question
-    
-    Returns:
-        Dictionary containing accuracy metrics
     """
-    metrics = {
-        'total_questions': 0,
-        'total_repos': 0,
-        'found_repos': 0,
-        'exact_matches': 0,
-        'partial_matches': 0,
-        'question_metrics': []
-    }
+    total_matches = 0
+    total_repos = 0
+    question_metrics = {}
     
     for title, data in results.items():
-        question_metric = {
-            'question': title,
-            'known_repos': known_repos[title],
-            'found_repos': [],
-            'accuracy': 0.0,
-            'rank_positions': []
+        # Get all found repos (including normalized URLs)
+        found_repos = set()
+        if 'classified_links' in data:
+            # Add repos from classified links
+            for repo in data['classified_links']['codebases']:
+                # Normalize URL and add variations
+                base_url = repo.lower().rstrip('/')
+                found_repos.add(base_url)
+                # Add common variations
+                if 'github.com' in base_url:
+                    found_repos.add(base_url.replace('github.com/', 'github.com'))
+                    found_repos.add(base_url + '.git')
+
+        # Normalize known repos
+        known = set()
+        for repo in known_repos[title]:
+            base_url = repo.lower().rstrip('/')
+            known.add(base_url)
+            if 'github.com' in base_url:
+                known.add(base_url.replace('github.com/', 'github.com'))
+                known.add(base_url + '.git')
+
+        # Find matches
+        matches = found_repos.intersection(known)
+        
+        # Update counts
+        matches_count = len(matches)
+        known_count = len(known_repos[title])  # Use original count
+        total_matches += matches_count
+        total_repos += known_count
+        
+        # Calculate accuracy
+        accuracy = matches_count / known_count if known_count > 0 else 0
+        
+        # Store metrics
+        question_metrics[title] = {
+            'accuracy': accuracy,
+            'matches_found': list(matches),
+            'total_found': len(found_repos),
+            'total_known': known_count,
+            'all_found_repos': list(found_repos)
         }
         
-        # Skip if no processed content or analysis
-        if not data.get('processed_content') or not data.get('candidate_analysis'):
-            question_metric['error'] = "No processed content or analysis available"
-            metrics['question_metrics'].append(question_metric)
-            continue
-        
-        # Get ranked candidates
-        ranked_candidates = data['candidate_analysis'].get('ranked_candidates', [])
-        if not ranked_candidates:
-            question_metric['error'] = "No ranked candidates available"
-            metrics['question_metrics'].append(question_metric)
-            continue
-            
-        # Get known repositories for this question
-        known = set(known_repos[title])
-        found = set(candidate['url'] for candidate in ranked_candidates)
-        
-        # Track found repositories and their rankings
-        matches = known.intersection(found)
-        for repo in matches:
-            rank = next(i for i, c in enumerate(ranked_candidates, 1) if c['url'] == repo)
-            question_metric['rank_positions'].append((repo, rank))
-        
-        # Calculate metrics for this question
-        question_metric['found_repos'] = list(found)
-        question_metric['matches'] = list(matches)
-        question_metric['accuracy'] = len(matches) / len(known) if known else 0.0
-        
-        # Update overall metrics
-        metrics['total_questions'] += 1
-        metrics['total_repos'] += len(known)
-        metrics['found_repos'] += len(matches)
-        metrics['exact_matches'] += 1 if matches == known else 0
-        metrics['partial_matches'] += 1 if matches and matches != known else 0
-        
-        metrics['question_metrics'].append(question_metric)
-    
+        # Print detailed results for debugging
+        print(f"\nQuestion: {title}")
+        print(f"Accuracy: {accuracy:.2%}")
+        print(f"Found {matches_count} out of {known_count} known repositories")
+        if matches:
+            print("Matched repositories:")
+            for repo in matches:
+                print(f"- {repo}")
+
     # Calculate overall accuracy
-    metrics['overall_accuracy'] = metrics['found_repos'] / metrics['total_repos'] if metrics['total_repos'] > 0 else 0.0
-    metrics['exact_match_rate'] = metrics['exact_matches'] / metrics['total_questions'] if metrics['total_questions'] > 0 else 0.0
+    overall_accuracy = total_matches / total_repos if total_repos > 0 else 0
     
-    return metrics
+    return {
+        'overall_accuracy': overall_accuracy,
+        'total_matches': total_matches,
+        'total_repos': total_repos,
+        'question_metrics': question_metrics
+    }
 
 if __name__ == "__main__":
     path = "C:\\Users\\65881\\Downloads\\questions.jsonl\\questions.jsonl"
@@ -672,32 +671,12 @@ if __name__ == "__main__":
                         print(code_block[:500] + ("..." if len(code_block) > 500 else ""))
                         print("-" * 50)
 
-        print("\nEvaluating Model Accuracy...")
-        accuracy_metrics = evaluate_model_accuracy(results, known_repos)
-            
-        print("\nAccuracy Metrics:")
-        print(f"Overall Accuracy: {accuracy_metrics['overall_accuracy']*100:.2f}%")
-        print(f"Exact Match Rate: {accuracy_metrics['exact_match_rate']*100:.2f}%")
-        print(f"Total Questions: {accuracy_metrics['total_questions']}")
-        print(f"Total Repositories: {accuracy_metrics['total_repos']}")
-        print(f"Found Repositories: {accuracy_metrics['found_repos']}")
-        print(f"Exact Matches: {accuracy_metrics['exact_matches']}")
-        print(f"Partial Matches: {accuracy_metrics['partial_matches']}")
-            
-        print("\nPer-Question Metrics:")
-        for metric in accuracy_metrics['question_metrics']:
-            print(f"\nQuestion: {metric['question']}")
-            print(f"Accuracy: {metric['accuracy']*100:.2f}%")
-            if metric.get('error'):
-                print(f"Error: {metric['error']}")
-            else:
-                print("Known Repositories:", len(metric['known_repos']))
-                print("Found Repositories:", len(metric['found_repos']))
-                print("Matches:", len(metric.get('matches', [])))
-                if metric['rank_positions']:
-                    print("\nMatched Repository Rankings:")
-                    for repo, rank in metric['rank_positions']:
-                        print(f"- {repo}: Rank {rank}")
+    print("\nEvaluating Results...")
+    metrics = evaluate_model_accuracy(results, known_repos)
+    
+    print(f"\nOverall Accuracy: {metrics['overall_accuracy']:.2%}")
+    print(f"Total Matches: {metrics['total_matches']}")
+    print(f"Total Known Repositories: {metrics['total_repos']}")    
 
 #previous main block start
 '''if __name__ == "__main__":
