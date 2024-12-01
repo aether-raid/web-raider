@@ -458,9 +458,9 @@ def get_repo_content(url: str, max_files: int = 5) -> str:
         print(f"Error extracting content from {url}: {e}")
         return ""
     
-def rerank_candidates_with_llm(question: str, candidates: List[dict], known_repos: List[str], max_candidates: int = 5) -> List[dict]:
+def evaluate_candidates_with_llm(question: str, candidates: List[dict], known_repos: List[str], max_candidates: int = 5) -> dict:
     """
-    Re-ranks candidate links using LLM based on repository content.
+    Evaluates candidate links using LLM based on repository content.
     
     Arguments:
     - question: The original question (str)
@@ -469,8 +469,11 @@ def rerank_candidates_with_llm(question: str, candidates: List[dict], known_repo
     - max_candidates: Maximum number of candidates to analyze (int)
     
     Returns:
-    - List of re-ranked candidates (list of dict)
+    - Dictionary with the best candidate link and its accuracy score (dict)
     """
+    if not candidates:
+        return {'best_candidate': None, 'accuracy': 0}
+
     # Get content for top candidates
     candidates_with_content = []
     for candidate in candidates[:max_candidates]:
@@ -483,76 +486,60 @@ def rerank_candidates_with_llm(question: str, candidates: List[dict], known_repo
             })
 
     if not candidates_with_content:
-        return candidates
+        return {'best_candidate': None, 'accuracy': 0}
 
     # Prepare evaluation prompt
+    known_repo_content = get_repo_content(known_repos[0]) if known_repos else ""
     evaluation_prompt = f"""
     Question: {question}
     
-    Rate these GitHub repositories for their relevance and solution quality.
-    Consider:
-    1. Direct relevance to the question
-    2. Code quality and implementation
-    3. Documentation clarity
-    4. Solution completeness
+    Evaluate the following GitHub repository content to determine if it answers the question.
+    Use the known repository content as a reference model answer.
     
-    Rate each repository from 0-10 and explain why.
+    Known Repository Content:
+    {known_repo_content}
     
-    Repositories to evaluate:
+    Candidate Repository Content:
+    {candidates_with_content[0]['content']}
     
-    {"="*50}
-    """ + "\n\n".join([
-        f"Repository: {repo['url']}\n\nContent:\n{repo['content']}\n{'='*50}"
-        for repo in candidates_with_content
-    ]) + """
-    
-    Format your response exactly like this:
-    {
-        "rankings": [
-            {
-                "url": "repository_url",
-                "score": score_number,
-                "reasoning": "explanation"
-            }
-        ]
-    }
+    Rate the candidate repository from 0-100 based on how well it answers the question.
     """
     
     try:
         # Get LLM evaluation
         evaluation = llm_prompt(evaluation_prompt)
-        eval_data = json.loads(evaluation.choices[0].message.content.strip())
-        
-        # Update all candidates with scores
-        for candidate in candidates:
-            matching_rank = next(
-                (r for r in eval_data['rankings'] 
-                 if r['url'] == candidate['url']),
-                None
-            )
+        accuracy = float(evaluation.choices[0].message.content.strip())
+
+        if accuracy >= 70:
+            return {'best_candidate': candidates_with_content[0]['url'], 'accuracy': accuracy}
+
+        # Continue evaluating other candidates if accuracy is low
+        for candidate in candidates_with_content[1:]:
+            evaluation_prompt = f"""
+            Question: {question}
             
-            if matching_rank:
-                candidate['llm_score'] = float(matching_rank['score'])
-                candidate['reasoning'] = matching_rank['reasoning']
-                # Combined score considers both LLM score and occurrence count
-                candidate['combined_score'] = (
-                    candidate['llm_score'] * np.log(candidate['occurrences'] + 1)
-                )
-            else:
-                # Keep candidates that weren't evaluated but with lower priority
-                candidate['llm_score'] = 0
-                candidate['reasoning'] = "Not evaluated"
-                candidate['combined_score'] = np.log(candidate['occurrences'] + 1)
-        
-        # Sort by combined score
-        return sorted(candidates, key=lambda x: x.get('combined_score', 0), reverse=True)
-        
+            Evaluate the following GitHub repository content to determine if it answers the question.
+            Use the known repository content as a reference model answer.
+            
+            Known Repository Content:
+            {known_repo_content}
+            
+            Candidate Repository Content:
+            {candidate['content']}
+            
+            Rate the candidate repository from 0-100 based on how well it answers the question.
+            """
+            evaluation = llm_prompt(evaluation_prompt)
+            accuracy = float(evaluation.choices[0].message.content.strip())
+
+            if accuracy >= 70:
+                return {'best_candidate': candidate['url'], 'accuracy': accuracy}
+
+        return {'best_candidate': candidates_with_content[0]['url'], 'accuracy': accuracy}, known_repo_content
+
     except Exception as e:
-        print(f"LLM ranking failed: {str(e)}")
-        # Fall back to occurrence-based ranking
-        for candidate in candidates:
-            candidate['combined_score'] = candidate['occurrences']
-        return sorted(candidates, key=lambda x: x['occurrences'], reverse=True)
+        print(f"LLM evaluation failed: {str(e)}")
+        return {'best_candidate': None, 'accuracy': 0}
 
 def extract_code_from_repo(url: str) -> dict:
     """Extracts code from a repository URL."""
@@ -764,16 +751,54 @@ if __name__ == "__main__":
                     analysis_results=analysis
                 )
                 
+                # Ensure the candidate list only contains codebase links
+                candidates = [candidate for candidate in candidates if candidate['url'] in classified_links['codebases']]
+                
                 print("\nCandidate List (by occurrences):")
                 for i, candidate in enumerate(candidates, 1):
                     print(f"{i}. {candidate['url']} (occurrences: {candidate['occurrences']})")
 
-                # Re-rank with LLM
-                ranked_candidates = rerank_candidates_with_llm(
+                # evaluate with LLM
+                ranked_candidates, known_repo_content = evaluate_candidates_with_llm(
                     question=title,
                     candidates=candidates,
                     known_repos=known_repos_list
                 )
+                
+                if ranked_candidates['accuracy'] < 50:
+                    print("\nEvaluating top similar chunks...")
+                    analysis = analyze_similarity_and_extract_links(
+                        question=title,
+                        processed_content=processed_content,
+                        top_k=25
+                    )
+                    
+                    if analysis:
+                        for chunk in analysis['top_chunks']:
+                            evaluation_prompt = f"""
+                            Question: {title}
+                            
+                            Evaluate the following content to determine if it answers the question.
+                            Use the known repository content as a reference model answer.
+                            
+                            Known Repository Content:
+                            {known_repo_content}
+                            
+                            Candidate Content:
+                            {chunk['chunk_text']}
+                            
+                            Rate the candidate content from 0-100 based on how well it answers the question. Only reply with the number.
+                            """
+                            try:
+                                evaluation = llm_prompt(evaluation_prompt)
+                                accuracy = float(evaluation.choices[0].message.content.strip())
+                                
+                                if accuracy >= 70:
+                                    print(f"Found a good answer in chunk with accuracy: {accuracy}%")
+                                    break
+                            except Exception as e:
+                                print(f"LLM evaluation failed: {str(e)}")
+                                continue
                 
                 print("\nRe-ranked Candidates:")
                 for i, candidate in enumerate(ranked_candidates, 1):
@@ -785,7 +810,7 @@ if __name__ == "__main__":
                 
                 # Extract code from top repositories
                 print("\nExtracting code from top repositories...")
-                code_results = extract_from_top_candidates(ranked_candidates, k=3)
+                code_results = extract_from_top_candidates(ranked_candidates, k=1)
                 
                 print("\nExtracted Code:")
                 for i, result in enumerate(code_results, 1):
