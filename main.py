@@ -62,7 +62,7 @@ def llm_rephrase(prompt):
         messages=[
             {
                 'role': 'user',
-                'content': f'slightly rephrase the question "{prompt}" and only produce the rephrased question with nothing else. you are alowed to use the original words in the question. You must not change the meaning of the question or add unecessaey information or words as much as possible.',
+                'content': f'slightly rephrase the question "{prompt}" and only produce the rephrased question with nothing else. You are alowed to use some of the original words in the question, but try not to end up with someting too close to the original question. You must not change the meaning of the question or add unecessaey information or words as much as possible.',
             }
         ],
         model='llama3.2',
