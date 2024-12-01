@@ -767,7 +767,7 @@ if __name__ == "__main__":
                 print("\nCandidate List (by occurrences):")
                 for i, candidate in enumerate(candidates, 1):
                     print(f"{i}. {candidate['url']} (occurrences: {candidate['occurrences']})")
-                '''
+
                 # Re-rank with LLM
                 ranked_candidates = rerank_candidates_with_llm(
                     question=title,
@@ -798,7 +798,7 @@ if __name__ == "__main__":
                         # Print first 500 characters of code with ellipsis if longer
                         print(code_block[:500] + ("..." if len(code_block) > 500 else ""))
                         print("-" * 50)
-                '''
+
     print("\nEvaluating Results...")
     metrics = evaluate_model_accuracy(results, known_repos)
     
