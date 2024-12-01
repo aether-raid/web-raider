@@ -18,8 +18,6 @@ import numpy as np
 from urllib.parse import urljoin
 from concurrent.futures import ThreadPoolExecutor
 from collections import Counter
-import aiohttp
-import asyncio
 from cachetools import cached, TTLCache
 
 # - llm_rephrase(prompt): Rephrases a question using the OpenAI API.
@@ -87,6 +85,10 @@ def llm_prompt(prompt):
     return chat_completion
 
 
+# Cache for URL status checks
+url_status_cache = TTLCache(maxsize=1000, ttl=3600)
+
+@cached(url_status_cache)
 def check_url_status(url, timeout=15):
     """Checks if a URL is accessible."""
     try:
@@ -100,34 +102,9 @@ def check_url_status(url, timeout=15):
         except:
             return False
 
-# Cache for URL status checks
-url_status_cache = TTLCache(maxsize=1000, ttl=3600)
-
-@cached(url_status_cache)
-async def async_check_url_status(url, timeout=15):
-    """Checks if a URL is accessible using asynchronous requests."""
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.head(url, timeout=timeout) as response:
-                return 200 <= response.status < 400
-        except:
-            try:
-                async with session.get(url, timeout=timeout) as response:
-                    return 200 <= response.status < 400
-            except:
-                return False
-
-async def async_filter_dead_links(urls):
-    """Filters out dead links using asynchronous requests."""
-    tasks = [async_check_url_status(url) for url in urls]
-    url_status = await asyncio.gather(*tasks)
-    return [url for url, is_live in zip(urls, url_status) if is_live]
-
 def filter_dead_links(urls):
-    """Wrapper to run async_filter_dead_links synchronously."""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    return loop.run_until_complete(async_filter_dead_links(urls))
+    """Filters out dead links using synchronous requests."""
+    return [url for url in urls if check_url_status(url)]
 
 def classifier(results):
     """Classifies URLs into codebases, articles, and forums."""
@@ -721,7 +698,7 @@ if __name__ == "__main__":
     - Evaluates model accuracy.
     """
     path = "C:\\Users\\LENOVO\\OneDrive\\Documents\\Desktop\\RAiD-Repo\\web-raider\\questions.jsonl"
-    results, known_repos = process_questions(path, limit=50)
+    results, known_repos = process_questions(path, limit=5)
     
     print("\nProcessing Results:")
     for title, data in results.items():
@@ -755,7 +732,7 @@ if __name__ == "__main__":
             analysis = analyze_similarity_and_extract_links(
                 question=title,
                 processed_content=processed_content,
-                top_k=5
+                top_k=25
             )
             
             if analysis:
