@@ -20,6 +20,9 @@ from concurrent.futures import ThreadPoolExecutor
 from collections import Counter
 import base64
 import json
+import aiohttp
+import asyncio
+from cachetools import cached, TTLCache
 
 # - llm_rephrase(prompt): Rephrases a question using the OpenAI API.
 # - llm_prompt(prompt): Sends a prompt to the OpenAI API and returns the response.
@@ -99,13 +102,32 @@ def check_url_status(url, timeout=15):
         except:
             return False
 
+# Cache for URL status checks
+url_status_cache = TTLCache(maxsize=1000, ttl=3600)
+
+@cached(url_status_cache)
+async def async_check_url_status(url, timeout=15):
+    """Checks if a URL is accessible using asynchronous requests."""
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.head(url, timeout=timeout) as response:
+                return 200 <= response.status < 400
+        except:
+            try:
+                async with session.get(url, timeout=timeout) as response:
+                    return 200 <= response.status < 400
+            except:
+                return False
+
+async def async_filter_dead_links(urls):
+    """Filters out dead links using asynchronous requests."""
+    tasks = [async_check_url_status(url) for url in urls]
+    url_status = await asyncio.gather(*tasks)
+    return [url for url, is_live in zip(urls, url_status) if is_live]
+
 def filter_dead_links(urls):
-    """Filters out dead links using parallel requests."""
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        # Map URLs to their status
-        url_status = list(executor.map(check_url_status, urls))
-        # Return only live URLs
-        return [url for url, is_live in zip(urls, url_status) if is_live]
+    """Wrapper to run async_filter_dead_links synchronously."""
+    return asyncio.run(async_filter_dead_links(urls))
 
 def classifier(results):
     """Classifies URLs into codebases, articles, and forums."""
@@ -205,30 +227,14 @@ def process_and_vectorize_content(classified_links: dict) -> dict:
     }
     
     # Process articles and forums
-    for content_type in ['articles', 'forums']:
-        print(f"\nProcessing {content_type}...")
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = []
+        for content_type in ['articles', 'forums']:
+            for url in classified_links[content_type]:
+                futures.append(executor.submit(fetch_and_process_content, url, content_type, processed_content))
         
-        for url in classified_links[content_type]:
-            try:
-                print(f"Fetching content from: {url}")
-                content = get_html_content(url)
-                
-                if content:
-                    # Clean the content
-                    cleaned_content = clean_text(content)
-                    # Chunk the content
-                    chunks = chunk_text(cleaned_content)
-                    
-                    processed_content[content_type].append({
-                        'url': url,
-                        'chunks': chunks,
-                        'original_length': len(cleaned_content)
-                    })
-                    print(f"Successfully processed {len(chunks)} chunks")
-                    
-            except Exception as e:
-                print(f"Error processing {url}: {str(e)}")
-                continue
+        for future in futures:
+            future.result()
     
     # Vectorize all chunks
     all_chunks = []
@@ -259,6 +265,27 @@ def process_and_vectorize_content(classified_links: dict) -> dict:
         }
     
     return None
+
+def fetch_and_process_content(url, content_type, processed_content):
+    """Fetches and processes content from a URL."""
+    try:
+        print(f"Fetching content from: {url}")
+        content = get_html_content(url)
+        
+        if content:
+            # Clean the content
+            cleaned_content = clean_text(content)
+            # Chunk the content
+            chunks = chunk_text(cleaned_content)
+            
+            processed_content[content_type].append({
+                'url': url,
+                'chunks': chunks,
+                'original_length': len(cleaned_content)
+            })
+            print(f"Successfully processed {len(chunks)} chunks")
+    except Exception as e:
+        print(f"Error processing {url}: {str(e)}")
 
 def process_questions(path: str, limit: int = 5):
     """Processes questions from a JSONL file and classifies links."""

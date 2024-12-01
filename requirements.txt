@@ -13,3 +13,5 @@ google
 pydantic
 openai
 numpy
+aiohttp==3.8.1
+cachetools==5.3.0
