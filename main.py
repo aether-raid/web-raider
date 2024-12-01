@@ -527,7 +527,7 @@ def evaluate_candidates_with_llm(question: str, candidates: List[dict], known_re
             Candidate Repository Content:
             {candidate['content']}
             
-            Rate the candidate repository from 0-100 based on how well it answers the question.
+            Rate the candidate repository from 0-100 based on how well it answers the question. Only reply with the number.
             """
             evaluation = llm_prompt(evaluation_prompt)
             accuracy = float(evaluation.choices[0].message.content.strip())
