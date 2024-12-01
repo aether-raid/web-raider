@@ -125,7 +125,9 @@ async def async_filter_dead_links(urls):
 
 def filter_dead_links(urls):
     """Wrapper to run async_filter_dead_links synchronously."""
-    return asyncio.run(async_filter_dead_links(urls))
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    return loop.run_until_complete(async_filter_dead_links(urls))
 
 def classifier(results):
     """Classifies URLs into codebases, articles, and forums."""
