@@ -1,6 +1,6 @@
 # src/search.py
 
-from googlesearch import search, SearchResult
+from googlesearch import search
 from .constants import CODE_BLACKLIST
 
 

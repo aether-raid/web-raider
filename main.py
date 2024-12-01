@@ -21,6 +21,29 @@ from collections import Counter
 import base64
 import json
 
+# - llm_rephrase(prompt): Rephrases a question using the OpenAI API.
+# - llm_prompt(prompt): Sends a prompt to the OpenAI API and returns the response.
+# - check_url_status(url, timeout=15): Checks if a URL is accessible.
+# - filter_dead_links(urls): Filters out dead links using parallel requests.
+# - classifier(results): Classifies URLs into codebases, articles, and forums.
+# - extract_links(text): Extracts all the links from the HTML content.
+# - get_html_content(url): Fetches the HTML content of the web page from a single link.
+# - clean_text(text): Cleans and normalizes text content.
+# - chunk_text(text, chunk_size=300, overlap=60): Splits text into overlapping chunks.
+# - process_and_vectorize_content(classified_links): Processes and vectorizes content from articles and forums.
+# - process_questions(path, limit=5): Processes questions from a JSONL file and classifies links.
+# - analyze_similarity_and_extract_links(question, processed_content, top_k=25): Analyzes chunk similarity using LSA and extracts codebase links from top chunks.
+# - create_candidate_list(classified_links, analysis_results): Creates and sorts a candidate list based on occurrences.
+# - normalize_github_url(url): Normalizes GitHub URLs to a standard format.
+# - get_repo_content(url, max_files=5): Extracts relevant content from a repository.
+# - rerank_candidates_with_llm(question, candidates, known_repos, max_candidates=5): Re-ranks candidate links using LLM based on repository content.
+# - extract_code_from_repo(url): Extracts code from a repository URL.
+# - extract_from_top_candidates(ranked_candidates, k=3): Extracts code from the top k ranked repositories.
+# - evaluate_model_accuracy(results, known_repos): Evaluates model accuracy by comparing found repositories with known repositories.
+
+cheatcode = " stackoverflow" # to scope down the search results to stackoverflow
+
+
 client = OpenAI(
     base_url="http://localhost:11434/v1/",
     api_key='ollama'
@@ -33,20 +56,38 @@ class Question(BaseModel):
     Title: str
     Body: str
 
-def llamas(prompt):
+
+def llm_rephrase(prompt):
+    """Rephrases a question using the OpenAI API."""
     chat_completion = client.chat.completions.create(
         messages=[
             {
                 'role': 'user',
-                'content': f'rephrase the question "{prompt}" and only produce the rephrased question with nothing else',
+                'content': f'slightly rephrase the question "{prompt}" and only produce the rephrased question with nothing else. you are alowed to use the original words in the question. You must not change the meaning of the question or add unecessaey information or words as much as possible.',
             }
         ],
-        model='mistral',
+        model='llama3.2',
+        temperature=0,
     )
     return chat_completion
 
+def llm_prompt(prompt):
+    """Rephrases a question using the OpenAI API."""
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {
+                'role': 'user',
+                'content': f'{prompt}',
+            }
+        ],
+        model='llama3.2',
+        temperature=0,
+    )
+    return chat_completion
+
+
 def check_url_status(url, timeout=15):
-    """Check if URL is accessible."""
+    """Checks if a URL is accessible."""
     try:
         response = requests.head(url, timeout=timeout, allow_redirects=True)
         return 200 <= response.status_code < 400
@@ -59,7 +100,7 @@ def check_url_status(url, timeout=15):
             return False
 
 def filter_dead_links(urls):
-    """Filter out dead links using parallel requests."""
+    """Filters out dead links using parallel requests."""
     with ThreadPoolExecutor(max_workers=10) as executor:
         # Map URLs to their status
         url_status = list(executor.map(check_url_status, urls))
@@ -67,23 +108,16 @@ def filter_dead_links(urls):
         return [url for url, is_live in zip(urls, url_status) if is_live]
 
 def classifier(results):
-    """
-    Classifies URLs into codebases, articles, and forums.
-    Returns dictionary containing filtered lists.
-    """
+    """Classifies URLs into codebases, articles, and forums."""
     codebases = []
     articles = []
     forums = []
-    seen_urls = set()
+    #seen_urls = set()
 
     # First filter out dead links
     live_urls = filter_dead_links(results)
     
     for url in live_urls:
-        if url in seen_urls:
-            continue
-
-        seen_urls.add(url)
 
         try:
             url_type = url_classifier(url)
@@ -122,11 +156,11 @@ def get_html_content(url: str):
         response.raise_for_status()  # Check if the request was successful
         return response.text  # Return the HTML content of the page
     except:
-        print(f"Failed to fetch {url}")
+        #print(f"Failed to fetch {url}")
         return 0
 
 def clean_text(text: str) -> str:
-    """Clean and normalize text content."""
+    """Cleans and normalizes text content."""
     if not text:
         return ""
     
@@ -144,8 +178,8 @@ def clean_text(text: str) -> str:
     
     return text
 
-def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]:
-    """Split text into overlapping chunks."""
+def chunk_text(text: str, chunk_size: int = 500, overlap: int = 150) -> List[str]:
+    """Splits text into overlapping chunks."""
     chunks = []
     start = 0
     text_length = len(text)
@@ -164,7 +198,7 @@ def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]
     return chunks
 
 def process_and_vectorize_content(classified_links: dict) -> dict:
-    """Process and vectorize content from articles and forums."""
+    """Processes and vectorizes content from articles and forums."""
     processed_content = {
         'articles': [],
         'forums': []
@@ -227,7 +261,7 @@ def process_and_vectorize_content(classified_links: dict) -> dict:
     return None
 
 def process_questions(path: str, limit: int = 5):
-    """Process questions from JSONL file and classify links."""
+    """Processes questions from a JSONL file and classifies links."""
     lines = []
     with open(path, "r") as file:
         for i in range(limit):
@@ -246,31 +280,29 @@ def process_questions(path: str, limit: int = 5):
             print("Original question:", org_question.Title)
             
             # Store known repos with normalized URLs
-            known_repos = [repo.lower().rstrip('/') for repo in org_question.Repos]
+            known_repos = list(org_question.Repos)
             ans_title_repo[org_question.Title] = known_repos
             
             # Get rephrased question
-            rep_question = llamas(org_question.Title)
-            rephrased = rep_question.choices[0].message.content
+            rep_question = llm_rephrase(org_question.Title)
+            rephrased = rep_question.choices[0].message.content  + cheatcode
             print("Rephrased question:", rephrased)
             
             # Get search results
-            search_results = []
-            for result in search(rephrased, num_results=10):
-                search_results.append(result.lower().rstrip('/'))  # Normalize URLs
+            search_results = list(search(rephrased, stop=10))  # Convert generator to list
             print("Found initial results:", len(search_results))
 
             # Extract links from content
             link_list = []
             for link in search_results:
                 content = get_html_content(link)
+                content = clean_text(content)
                 if content:
-                    extracted_links = [link.lower().rstrip('/') for link in extract_links(content)]
+                    extracted_links = extract_links(content)
                     link_list.extend(extracted_links)
 
             # Normalize and classify all links
-            normalized_links = list(set(link_list + search_results))  # Remove duplicates
-            classified_links = classifier(normalized_links)
+            classified_links = classifier(list(link_list + search_results))
             
             # Process and vectorize content
             processed_data = process_and_vectorize_content(classified_links)
@@ -302,14 +334,7 @@ def process_questions(path: str, limit: int = 5):
     return title_repo, ans_title_repo
 
 def analyze_similarity_and_extract_links(question: str, processed_content: dict, top_k: int = 25):
-    """
-    Analyze chunk similarity using LSA and extract codebase links from top chunks.
-    
-    Args:
-        question: Original or rephrased question
-        processed_content: Dictionary containing vectors and metadata
-        top_k: Number of top results to return
-    """
+    """Analyzes chunk similarity using LSA and extracts codebase links from top chunks."""
     if not processed_content:
         return None
         
@@ -362,15 +387,9 @@ def analyze_similarity_and_extract_links(question: str, processed_content: dict,
     }
 
 def create_candidate_list(classified_links: dict, analysis_results: dict) -> dict:
-    """
-    Create and sort candidate list based on occurrences.
-    
-    Args:
-        classified_links: Original classified links dictionary
-        analysis_results: Results from LSA analysis containing extracted links
-    """
+    """Creates and sorts a candidate list based on occurrences."""
     # Combine all codebase links
-    all_links = set(classified_links['codebases'])
+    all_links = list(classified_links['codebases'])
     all_links.update(analysis_results['all_codebase_links'])
     
     # Count occurrences in chunks
@@ -383,38 +402,23 @@ def create_candidate_list(classified_links: dict, analysis_results: dict) -> dic
     # Count in top chunks
     for chunk in analysis_results['top_chunks']:
         for link in chunk['found_codebase_links']:
-            normalized_link = normalize_github_url(link)
-            link_counts[normalized_link] += 1        
+            link_counts[link] += 1        
     
     unique_links = set()
     sorted_candidates = []
 
     for link, count in link_counts.most_common():
-        normalized_link = normalize_github_url(link)
-        if normalized_link not in unique_links:
-            unique_links.add(normalized_link)
+        if link not in unique_links:
+            unique_links.add(link)
             sorted_candidates.append({
-                'url': normalized_link,
+                'url': link,
                 'occurrences': count
             })
 
     return sorted_candidates
 
-def normalize_github_url(url: str) -> str:
-    """Normalize GitHub URLs to a standard format."""
-    url = url.lower().strip('/')
-    # Remove .git extension
-    url = re.sub(r'\.git$', '', url)
-    # Remove http/https prefix
-    url = re.sub(r'^https?://', '', url)
-    # Remove www.
-    url = re.sub(r'^www\.', '', url)
-    # Standardize github.com format
-    url = re.sub(r'github\.com/', 'github.com/', url)
-    return url
-
 def get_repo_content(url: str, max_files: int = 5) -> str:
-    """Extract relevant content from repository."""
+    """Extracts relevant content from a repository."""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -452,13 +456,16 @@ def get_repo_content(url: str, max_files: int = 5) -> str:
     
 def rerank_candidates_with_llm(question: str, candidates: List[dict], known_repos: List[str], max_candidates: int = 5) -> List[dict]:
     """
-    Re-rank candidate links using LLM based on repository content.
+    Re-ranks candidate links using LLM based on repository content.
     
-    Args:
-        question: Original question
-        candidates: List of candidate repository links with occurrence counts
-        known_repos: List of known correct repositories
-        max_candidates: Maximum number of candidates to analyze
+    Arguments:
+    - question: The original question (str)
+    - candidates: List of candidate repository links with occurrence counts (list of dict)
+    - known_repos: List of known correct repositories (list of str)
+    - max_candidates: Maximum number of candidates to analyze (int)
+    
+    Returns:
+    - List of re-ranked candidates (list of dict)
     """
     # Get content for top candidates
     candidates_with_content = []
@@ -509,14 +516,14 @@ def rerank_candidates_with_llm(question: str, candidates: List[dict], known_repo
     
     try:
         # Get LLM evaluation
-        evaluation = llamas(evaluation_prompt)
+        evaluation = llm_prompt(evaluation_prompt)
         eval_data = json.loads(evaluation.choices[0].message.content.strip())
         
         # Update all candidates with scores
         for candidate in candidates:
             matching_rank = next(
                 (r for r in eval_data['rankings'] 
-                 if normalize_github_url(r['url']) == normalize_github_url(candidate['url'])),
+                 if r['url'] == candidate['url']),
                 None
             )
             
@@ -542,12 +549,9 @@ def rerank_candidates_with_llm(question: str, candidates: List[dict], known_repo
         for candidate in candidates:
             candidate['combined_score'] = candidate['occurrences']
         return sorted(candidates, key=lambda x: x['occurrences'], reverse=True)
-    
+
 def extract_code_from_repo(url: str) -> dict:
-    """
-    Extract code from repository URL.
-    Handles different repository platforms (GitHub, GitLab, etc.)
-    """
+    """Extracts code from a repository URL."""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -586,9 +590,7 @@ def extract_code_from_repo(url: str) -> dict:
         }
 
 def extract_from_top_candidates(ranked_candidates: List[dict], k: int = 3) -> List[dict]:
-    """
-    Extract code from top k ranked repositories.
-    """
+    """Extracts code from the top k ranked repositories."""
     results = []
     
     for candidate in ranked_candidates[:k]:
@@ -606,36 +608,35 @@ def extract_from_top_candidates(ranked_candidates: List[dict], k: int = 3) -> Li
     
     return results
 
+def normalize_github_url(url: str) -> str:
+    """Normalizes GitHub URLs to a standard format."""
+    url = url.lower().strip('/')
+    # Remove .git extension
+    url = re.sub(r'\.git$', '', url)
+    # Remove http/https prefix
+    url = re.sub(r'^https?://', '', url)
+    # Remove www.
+    url = re.sub(r'^www\.', '', url)
+    # Standardize github.com format
+    url = re.sub(r'github\.com/', 'github.com/', url)
+    return url
+
 def evaluate_model_accuracy(results: dict, known_repos: dict) -> dict:
-    """
-    Evaluate model accuracy by comparing found repositories with known repositories.
-    """
+    """Evaluates model accuracy by comparing found repositories with known repositories."""
     total_matches = 0
     total_repos = 0
     question_metrics = {}
     
     for title, data in results.items():
-        # Get all found repos (including normalized URLs)
+        # Get all found repos
         found_repos = set()
         if 'classified_links' in data:
             # Add repos from classified links
             for repo in data['classified_links']['codebases']:
-                # Normalize URL and add variations
-                base_url = repo.lower().rstrip('/')
-                found_repos.add(base_url)
-                # Add common variations
-                if 'github.com' in base_url:
-                    found_repos.add(base_url.replace('github.com/', 'github.com'))
-                    found_repos.add(base_url + '.git')
+                found_repos.add(repo)
 
-        # Normalize known repos
-        known = set()
-        for repo in known_repos[title]:
-            base_url = repo.lower().rstrip('/')
-            known.add(base_url)
-            if 'github.com' in base_url:
-                known.add(base_url.replace('github.com/', 'github.com'))
-                known.add(base_url + '.git')
+        # Get known repos
+        known = set(known_repos[title])
 
         # Find matches
         matches = found_repos.intersection(known)
@@ -678,7 +679,17 @@ def evaluate_model_accuracy(results: dict, known_repos: dict) -> dict:
     }
 
 if __name__ == "__main__":
-    path = "C:\\Users\\65881\\Downloads\\questions.jsonl\\questions.jsonl"
+    print("Running main function")
+    """
+    Main function to process questions and evaluate results.
+    - Reads questions from a JSONL file.
+    - Processes each question to classify and vectorize links.
+    - Analyzes content similarity and extracts codebase links.
+    - Creates and re-ranks candidate lists.
+    - Extracts code from top repositories.
+    - Evaluates model accuracy.
+    """
+    path = "C:\\Users\\LENOVO\\OneDrive\\Documents\\Desktop\\RAiD-Repo\\web-raider\\questions.jsonl"
     results, known_repos = process_questions(path, limit=5)
     
     print("\nProcessing Results:")
@@ -785,228 +796,4 @@ if __name__ == "__main__":
     
     print(f"\nOverall Accuracy: {metrics['overall_accuracy']:.2%}")
     print(f"Total Matches: {metrics['total_matches']}")
-    print(f"Total Known Repositories: {metrics['total_repos']}")    
-
-#previous main block start
-'''if __name__ == "__main__":
-    path = "C:\\Users\\65881\\Downloads\\questions.jsonl\\questions.jsonl"
-    results, known_repos,ans_title_repo = process_questions(path, limit=5)
-    
-    # Print final results
-    print("\nFinal Results:")
-    for title, classified_links in title_repo.items():
-        print(f"\nQuestion: {title}")
-        print(f"Number of found codebases: {len(classified_links['codebases'])}")
-        print(f"Number of found articles: {len(classified_links['articles'])}")
-        print(f"Number of found forums: {len(classified_links['forums'])}")
-        
-        # Compare with known repositories
-        known_repos = ans_title_repo[title]
-        print(f"Known repositories: {len(known_repos)}")
-        
-        # Print the actual links
-        print("\nCodebase Links:")
-        for link in classified_links['codebases']:
-            print(f"- {link}")
-            
-        print("\nArticle Links:")
-        for link in classified_links['articles']:
-            print(f"- {link}")
-            
-        print("\nForum Links:")
-        for link in classified_links['forums']:
-            print(f"- {link}")
-
-    # Print final results
-    print("\nFinal Results:")
-    for title, data in results.items():
-        print(f"\nQuestion: {title}")
-        classified_links = data['classified_links']
-        processed_content = data['processed_content']
-        
-        print(f"Found links:")
-        print(f"- Codebases: {len(classified_links['codebases'])}")
-        print(f"- Articles: {len(classified_links['articles'])}")
-        print(f"- Forums: {len(classified_links['forums'])}")
-        
-        if processed_content:
-            articles = processed_content['content']['articles']
-            forums = processed_content['content']['forums']
-            
-            print(f"\nProcessed content:")
-            print(f"- Articles processed: {len(articles)}")
-            print(f"- Forums processed: {len(forums)}")
-            print(f"- Total vectors: {processed_content['vectors'].shape[0]}")
-            
-            # Print sample chunks
-            print("\nSample chunks:")
-            for content_type in ['articles', 'forums']:
-                docs = processed_content['content'][content_type]
-                if docs:
-                    print(f"\nFrom {content_type}:")
-                    doc = docs[0]
-                    print(f"URL: {doc['url']}")
-                    if doc['chunks']:
-                        print("First chunk preview:")
-                        print(doc['chunks'][0][:200] + "...")
-        print("\nAnalyzing content similarity and extracting links...")
-    
-    for title, data in results.items():
-        print(f"\nQuestion: {title}")
-        processed_content = data['processed_content']
-        
-        if processed_content:
-            analysis = analyze_similarity_and_extract_links(
-                question=title,
-                processed_content=processed_content,
-                top_k=5
-            )
-            
-            if analysis:
-                print("\nTop similar chunks:")
-                for i, chunk in enumerate(analysis['top_chunks'], 1):
-                    print(f"\n{i}. From {chunk['content_type']} ({chunk['url']}):")
-                    print(f"Similarity Score: {chunk['similarity_score']:.4f}")
-                    print("Preview:", chunk['chunk_text'][:200] + "...")
-                    if chunk['found_codebase_links']:
-                        print("Found codebase links:")
-                        for link in chunk['found_codebase_links']:
-                            print(f"- {link}")
-                
-                print("\nAll unique codebase links found in top chunks:")
-                for link in analysis['all_codebase_links']:
-                    print(f"- {link}")
-                
-                # Compare with known repositories
-                known = set(known_repos[title])
-                found = set(analysis['all_codebase_links'])
-                matches = known.intersection(found)
-                
-                print(f"\nRepository matching:")
-                print(f"Found {len(matches)} out of {len(known)} known repositories")
-                if matches:
-                    print("Matched repositories:")
-                    for repo in matches:
-                        print(f"- {repo}")'''
-#previous main block end
-
-
-#oldest start
-'''def classifier(results):
-    codebases = []
-    seen_urls = set()
-
-    for url in results:
-        #print("analysing", url)
-        if url in seen_urls:
-            continue
-
-        seen_urls.add(url)
-
-        try:
-
-            if url_classifier(url) == 'Codebase':
-                codebases.append(url)
-            
-            elif url_classifier(url) == 'Article':
-                pass
-
-            elif url_classifier(url) == 'Forum':
-                pass
-
-            else:
-                continue
-        except:
-             pass
-    #print(f'Found {len(codebases)} codebases!')
-
-    return codebases'''
-
-'''def extract_links(text):
-        """
-        Extracts all the links from the HTML content.
-        """
-        links = ""
-        try:
-            # Extract all the links using regex
-            links = re.findall(r'(http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)', text)
-            #print(links)
-        except:
-            pass
-
-        return links
-
-def get_html_content(url :str):
-        """
-        Fetches the HTML content of the web page from a single link.
-        """
-        try:
-            response = requests.get(url)
-            response.raise_for_status()  # Check if the request was successful
-            return response.text  # Return the HTML content of the page
-        except:
-            print(f"Failed to fetch {url}")
-            return 0
-        
-path = "C:\\Users\\65881\\Downloads\\questions.jsonl\\questions.jsonl"
-limit = 5
-lines = []
-with open(path, "r") as file:
-    for i in range(limit):
-        lines.append(file.readline())
-        
-#print(lines)
-
-class Question(BaseModel):
-    Id: int
-    AnswerIds: List[int]
-    Repos: List[str]
-    Title: str
-    Body: str
-
-ans_title_repo = {}
-for line in lines:
-    json_data = json.loads(line)
-    question = Question(**json_data)
-    ans_title_repo[question.Title] = question.Repos
-
-title_repo = {}
-
-for line in lines:
-    json_data = json.loads(line)
-    org_question = Question(**json_data)
-    print("Original question: ", org_question.Title)
-    rep_question = llamas(org_question.Title)
-    print("Rephrased question: ", rep_question.choices[0].message.content)
-    results = search(rep_question.choices[0].message.content, num_results=10)
-    print(results)
-
-    link_list = []
-
-    for link in results:
-        content = get_html_content(link)
-        link_list.append(extract_links(content))
-
-    links = []
-    for link in link_list:
-        links += classifier(link)
-############################################
-    links += classifier(results)
-    title_repo[org_question.Title] = links
-
-test = title_repo
-ans = ans_title_repo
-
-pass_rate = 0
-for key in ans.keys():
-    for link in test[key]:
-        if link in ans[key]:
-            print("passed")
-            pass_rate += 1
-        else:
-            print()
-for v in test.values():
-    for l in v:
-        print(v)
-print(pass_rate/limit)'''
-#oldest end
+    print(f"Total Known Repositories: {metrics['total_repos']}")
