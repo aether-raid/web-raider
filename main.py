@@ -18,8 +18,6 @@ import numpy as np
 from urllib.parse import urljoin
 from concurrent.futures import ThreadPoolExecutor
 from collections import Counter
-import base64
-import json
 import aiohttp
 import asyncio
 from cachetools import cached, TTLCache
@@ -416,7 +414,7 @@ def analyze_similarity_and_extract_links(question: str, processed_content: dict,
 def create_candidate_list(classified_links: dict, analysis_results: dict) -> dict:
     """Creates and sorts a candidate list based on occurrences."""
     # Combine all codebase links
-    all_links = list(classified_links['codebases'])
+    all_links = set(classified_links['codebases'])
     all_links.update(analysis_results['all_codebase_links'])
     
     # Count occurrences in chunks
@@ -653,6 +651,8 @@ def evaluate_model_accuracy(results: dict, known_repos: dict) -> dict:
     total_matches = 0
     total_repos = 0
     question_metrics = {}
+    total_accuracy = 0
+    question_count = 0
     
     for title, data in results.items():
         # Get all found repos
@@ -676,6 +676,8 @@ def evaluate_model_accuracy(results: dict, known_repos: dict) -> dict:
         
         # Calculate accuracy
         accuracy = matches_count / known_count if known_count > 0 else 0
+        total_accuracy += accuracy
+        question_count += 1
         
         # Store metrics
         question_metrics[title] = {
@@ -695,8 +697,8 @@ def evaluate_model_accuracy(results: dict, known_repos: dict) -> dict:
             for repo in matches:
                 print(f"- {repo}")
 
-    # Calculate overall accuracy
-    overall_accuracy = total_matches / total_repos if total_repos > 0 else 0
+    # Calculate overall accuracy as the average accuracy of each question
+    overall_accuracy = total_accuracy / question_count if question_count > 0 else 0
     
     return {
         'overall_accuracy': overall_accuracy,
@@ -717,7 +719,7 @@ if __name__ == "__main__":
     - Evaluates model accuracy.
     """
     path = "C:\\Users\\LENOVO\\OneDrive\\Documents\\Desktop\\RAiD-Repo\\web-raider\\questions.jsonl"
-    results, known_repos = process_questions(path, limit=5)
+    results, known_repos = process_questions(path, limit=50)
     
     print("\nProcessing Results:")
     for title, data in results.items():
@@ -786,7 +788,7 @@ if __name__ == "__main__":
                 print("\nCandidate List (by occurrences):")
                 for i, candidate in enumerate(candidates, 1):
                     print(f"{i}. {candidate['url']} (occurrences: {candidate['occurrences']})")
-                
+                '''
                 # Re-rank with LLM
                 ranked_candidates = rerank_candidates_with_llm(
                     question=title,
@@ -817,7 +819,7 @@ if __name__ == "__main__":
                         # Print first 500 characters of code with ellipsis if longer
                         print(code_block[:500] + ("..." if len(code_block) > 500 else ""))
                         print("-" * 50)
-
+                '''
     print("\nEvaluating Results...")
     metrics = evaluate_model_accuracy(results, known_repos)
     
