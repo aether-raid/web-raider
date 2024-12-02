@@ -19,6 +19,8 @@ from urllib.parse import urljoin
 from concurrent.futures import ThreadPoolExecutor
 from collections import Counter
 import statistics
+import pickle
+
 # - llm_rephrase(prompt): Rephrases a question using the OpenAI API.
 # - llm_prompt(prompt): Sends a prompt to the OpenAI API and returns the response.
 # - check_url_status(url, timeout=15): Checks if a URL is accessible.
@@ -52,6 +54,65 @@ class Question(BaseModel):
     Repos: List[str]
     Title: str
     Body: str
+
+class QueryType(BaseModel):
+    id: int
+    question: str
+    justification: str
+    choices: List[str]
+    confidence: float
+
+# load json object from jsonl file
+def check_json_file(question, file_name='results.jsonl'):
+    try:
+        with open(file_name, 'r', encoding="UTF-8") as f:
+            for line in f:
+                data = json.loads(line)
+                if data["question"] == question:
+                    return data
+    except:
+        return None
+    return None
+
+# check for existing query in jsonl file, if it is not there evaluate the query type and save object to json file.
+def check_query_type(question, file_name='results.jsonl'):
+    """use llm to evaluate the most suitable type of platform for answering the question, if it is a codebase, article or forum"""
+    if check_json_file(question) == None:
+        try:
+            # prompt engineering
+            query_type = llm_prompt(
+                f"""Given the question: {question}, what is the most suitable type of platform to find an answer? Is it a codebase, article, or forum
+                give your answer in terms of the platform that is most likely to provide the best answer to the question.
+                and the confidence level of your answer.
+                in the following dictionary format:                     
+                """ + f"""
+                {{
+                    "question": "{question}",
+                    "justification": "<brief-analysis-here>",
+                    "choices": ["codebase", "article", "forum"],
+                    "confidence": "<XX.XX>"
+                }}
+                Remember to consider the nature of the question and the type of information that is likely to be found on each platform.
+                1. Codebases are repositories of code that can provide direct solutions to programming problems.
+                2. Articles are detailed explanations or tutorials that can provide in-depth knowledge on a topic.
+                3. Forums are discussion platforms where users can ask questions and receive answers from the community.
+                4. Justification should be a brief analysis of why you think the platform you chose is the most suitable.
+                5. Confidence level should be a number between 0.00-100.00, with an accuracy of up to 2 decimal points.
+                6. ONLY reply with the dictionary format and do not add any other unnecessary text or symbols.
+                """)
+            # save object to json object
+            json_obj = json.loads(query_type.choices[0].message.content)
+            
+            # save object to jsonl file if object is valid and not already in the file
+            with open(file_name, 'a') as f:
+                json.dump(json_obj, f)
+                f.write('\n')
+
+            return json_obj["choices"]
+        except Exception as e:
+            print(f"LLM evaluation failed: {str(e)}")
+            return None
+    return check_json_file(question)["choices"]
 
 
 def llm_rephrase(prompt):
@@ -834,3 +895,6 @@ if __name__ == "__main__":
     #print(f"\nOverall Accuracy: {metrics['overall_accuracy']:.2%}")
     #print(f"Total Matches: {metrics['total_matches']}")
     #print(f"Total Known Repositories: {metrics['total_repos']}")
+
+
+        
