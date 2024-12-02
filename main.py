@@ -18,7 +18,6 @@ import numpy as np
 from urllib.parse import urljoin
 from concurrent.futures import ThreadPoolExecutor
 from collections import Counter
-from cachetools import cached, TTLCache
 
 # - llm_rephrase(prompt): Rephrases a question using the OpenAI API.
 # - llm_prompt(prompt): Sends a prompt to the OpenAI API and returns the response.
@@ -85,10 +84,6 @@ def llm_prompt(prompt):
     return chat_completion
 
 
-# Cache for URL status checks
-url_status_cache = TTLCache(maxsize=1000, ttl=3600)
-
-@cached(url_status_cache)
 def check_url_status(url, timeout=15):
     """Checks if a URL is accessible."""
     try:
