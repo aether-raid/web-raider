@@ -39,7 +39,7 @@ from collections import Counter
 # - extract_from_top_candidates(ranked_candidates, k=3): Extracts code from the top k ranked repositories.
 # - evaluate_model_accuracy(results, known_repos): Evaluates model accuracy by comparing found repositories with known repositories.
 
-cheatcode = " stackoverflow" # to scope down the search results to stackoverflow
+cheatcode = "" # to scope down the search results to stackoverflow
 
 
 client = OpenAI(
@@ -148,7 +148,11 @@ def get_html_content(url: str):
     try:
         response = requests.get(url)
         response.raise_for_status()  # Check if the request was successful
-        return response.text  # Return the HTML content of the page
+        content_type = response.headers.get('Content-Type', '').lower()
+        if 'xml' in content_type:
+            return BeautifulSoup(response.text, 'lxml-xml')  # Use lxml for XML content
+        else:
+            return BeautifulSoup(response.text, 'html.parser')  # Use html.parser for HTML content
     except:
         #print(f"Failed to fetch {url}")
         return 0
