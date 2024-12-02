@@ -33,7 +33,6 @@ from cachetools import cached, TTLCache
 # - process_questions(path, limit=5): Processes questions from a JSONL file and classifies links.
 # - analyze_similarity_and_extract_links(question, processed_content, top_k=25): Analyzes chunk similarity using LSA and extracts codebase links from top chunks.
 # - create_candidate_list(classified_links, analysis_results): Creates and sorts a candidate list based on occurrences.
-# - normalize_github_url(url): Normalizes GitHub URLs to a standard format.
 # - get_repo_content(url, max_files=5): Extracts relevant content from a repository.
 # - rerank_candidates_with_llm(question, candidates, known_repos, max_candidates=5): Re-ranks candidate links using LLM based on repository content.
 # - extract_code_from_repo(url): Extracts code from a repository URL.
@@ -62,7 +61,7 @@ def llm_rephrase(prompt):
         messages=[
             {
                 'role': 'user',
-                'content': f'slightly rephrase the question "{prompt}" and only produce the rephrased question with nothing else. You are alowed to use some of the original words in the question, but try not to end up with someting too close to the original question. You must not change the meaning of the question or add unecessaey information or words as much as possible.',
+                'content': f'slightly rephrase the question "{prompt}" and only produce the rephrased question with nothing else. You are alowed to use some of the original words in the question, but try not to end up with someting too close to the original question. You must not change the meaning of the question or add unnecessarey information or words as much as possible.',
             }
         ],
         model='llama3.2',
@@ -599,19 +598,6 @@ def extract_from_top_candidates(ranked_candidates: List[dict], k: int = 3) -> Li
     
     return results
 
-def normalize_github_url(url: str) -> str:
-    """Normalizes GitHub URLs to a standard format."""
-    url = url.lower().strip('/')
-    # Remove .git extension
-    url = re.sub(r'\.git$', '', url)
-    # Remove http/https prefix
-    url = re.sub(r'^https?://', '', url)
-    # Remove www.
-    url = re.sub(r'^www\.', '', url)
-    # Standardize github.com format
-    url = re.sub(r'github\.com/', 'github.com/', url)
-    return url
-
 def evaluate_model_accuracy(results: dict, known_repos: dict) -> dict:
     """Evaluates model accuracy by comparing found repositories with known repositories."""
     total_matches = 0
@@ -684,7 +670,7 @@ if __name__ == "__main__":
     - Extracts code from top repositories.
     - Evaluates model accuracy.
     """
-    path = "C:\\Users\\LENOVO\\OneDrive\\Documents\\Desktop\\RAiD-Repo\\web-raider\\questions.jsonl"
+    path = "C:\\Users\\65881\\Downloads\\questions.jsonl\\questions.jsonl"
     results, known_repos = process_questions(path, limit=5)
     
     print("\nProcessing Results:")
