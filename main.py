@@ -69,7 +69,8 @@ def check_json_file(question, file_name='results.jsonl'):
             for line in f:
                 data = json.loads(line)
                 if data["question"] == question:
-                    return data
+                    #return QueryType(**data)
+                    return QueryType(**data)
     except:
         return None
     return None
@@ -112,7 +113,7 @@ def check_query_type(question, file_name='results.jsonl'):
         except Exception as e:
             print(f"LLM evaluation failed: {str(e)}")
             return None
-    return check_json_file(question)["choices"]
+    return check_json_file(question).choices
 
 
 def llm_rephrase(prompt):
@@ -531,7 +532,7 @@ def evaluate_candidates_with_llm(question: str, candidates: List[dict], known_re
     - Dictionary with the best candidate link and its accuracy score (dict)
     """
     if not candidates:
-        return {'best_candidate': None, 'accuracy': 0}
+        return {'best_candidate': None, 'accuracy': 0}, known_repo_content
 
     # Get content for top candidates
     candidates_with_content = []
@@ -739,7 +740,9 @@ if __name__ == "__main__":
     - Extracts code from top repositories.
     - Evaluates model accuracy.
     """
-    path = "C:\\Users\\65881\\Downloads\\questions.jsonl\\questions.jsonl"
+    path = "../web-raider/questions.jsonl"
+            if check_query_type(title) != 'codebase':
+            continue
     results, known_repos = process_questions(path, limit=3)
     accuracy_list = []
     
