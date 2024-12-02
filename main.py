@@ -550,65 +550,39 @@ def evaluate_candidates_with_llm(question: str, candidates: List[dict], known_re
 
     # Prepare evaluation prompt
     known_repo_content = get_repo_content(known_repos[0]) if known_repos else ""
-    evaluation_prompt = f"""
-    Question: {question}
-    
-    Evaluate the following GitHub repository content to determine if it answers the question.
-    Use the known repository content as a reference model answer.
-    
-    Known Repository Content:
-    {known_repo_content}
-    
-    Candidate Repository Content:
-    {candidates_with_content[0]['content']}
-    
-    Rate the candidate repository from 0-100 based on how well it answers the question.
-    """
-    
+
     try:
-        # Get LLM evaluation
-        evaluation = llm_prompt(evaluation_prompt)
-        accuracy = float(evaluation.choices[0].message.content.strip())
-
-        if accuracy >= 70:
-            return {'best_candidate': candidates_with_content[0]['url'], 'accuracy': accuracy}
-
         # Continue evaluating other candidates if accuracy is low
-        for candidate in candidates_with_content[1:]:
+        for candidate in candidates_with_content:
             evaluation_prompt = f"""
             Question: {question}
-            
+
             Evaluate the following GitHub repository content to determine if it answers the question.
-            Use the known repository content as a reference model answer.
-            
-            Known Repository Content:
-            {known_repo_content}
-            
-            Candidate Repository Content:
-            {candidate['content']}
-            
-            Rate the candidate content from 0-100 based on how well it answers the question.  Reply only with the score in 2dp and a justification of the score with a brief analysis in JSON format.
-            Reply in this exact JSON format:
-            """ + """
-            {
-                "score": XX.XX,
-                "justification": "brief analysis here"
-            }
-            """
+            Use the known repository content as a reference model answer. Rate the candidate repository from 0-100 based on how well it answers the question. 
+            IMPORTANT: You must ONLY return a numeric score.
+            RULES:
+                1. score MUST be a number (e.g. 75.50, 32.40, etc.)
+                2. DO NOT use text like "The rate is" or "out of 100" only the number and nothing else.
+                Known Repository Content:
+                    {known_repo_content}
+    
+                Candidate Repository Content:
+                    {candidates_with_content[0]['content']}
+                """
+
             evaluation = llm_prompt(evaluation_prompt)
-            result = json.loads(evaluation.choices[0].message.content.strip())
-            accuracy = float(result["score"])
+            result = evaluation.choices[0].message.content.strip()
+            accuracy = float(result)
 
             if accuracy >= 70:
                 print('best_candidate: ', candidate['url'], '\naccuracy: ', accuracy )
-                return {'best_candidate': candidate['url'], 'accuracy': accuracy}
+                return {'best_candidate': candidate['url'], 'accuracy': accuracy}, known_repo_content
 
         return {'best_candidate': candidates_with_content[0]['url'], 'accuracy': accuracy}, known_repo_content
 
     except Exception as e:
         print(f"LLM evaluation failed: {str(e)}")
         return {'best_candidate': None, 'accuracy': 0}, known_repo_content
-
 
 def extract_code_from_repo(url: str) -> dict:
     """Extracts code from a repository URL."""
@@ -834,42 +808,54 @@ if __name__ == "__main__":
                     
                     if analysis:
                         for chunk in analysis['top_chunks']:
-                            evaluation_prompt = f"""
+                            evaluation_prompt = f"""You are a strict JSON validator. Your ONLY task is to output a score and justification in JSON format.
+                            STOP AND RECHECK: If your response is not in this EXACT format, it is wrong!
+
+                            EXACTLY COPY THIS FORMAT (replacing only the values):
+                            {{
+                                "score": 60.00,
+                                "justification": "Repository does not provide direct sorting examples"
+                            }}
+
                             Question: {title}
-                            
-                            Evaluate the following GitHub repository content to determine if it answers the question.
-                            Use the known repository content as a reference model answer.
-                            
-                            Known Repository Content:
-                            {known_repo_content}
-                            
-                            Candidate Repository Content:
-                            {chunk}
-                            
-                            Rate the candidate content from 0-100 based on how well it answers the question.  Reply only with the score in 2dp and a justification of the score with a brief analysis in JSON format.
-                            Reply in this exact JSON format:
-                            """ + """
-                            {
-                                "score": XX.XX,
-                                "justification": "brief analysis here"
-                            }
+                            Content to evaluate: {chunk}
+
+                            FINAL CHECK:
+                            - Is your response ONLY the JSON object? 
+                            - Is the score a number with 2 decimal places?
+                            - Is there NO additional text before or after?
+                            - Is there NO newline in the response?
                             """
+                            
                             try:
-                                evaluation = llm_prompt(evaluation_prompt)
-                                result = json.loads(evaluation.choices[0].message.content.strip())
-                                accuracy = float(result["score"])  # This will give you the score as a float
+                                evaluation = llm_rephrase(evaluation_prompt)
+                                response_text = evaluation.choices[0].message.content.strip()
+                                
+                                # Clean the response to ensure valid JSON
+                                response_text = response_text.replace('\n', ' ').replace('\r', '')
+                                response_text = response_text.strip()
+                                if not response_text.startswith('{'): 
+                                    response_text = '{' + response_text.split('{', 1)[1]
+                                if not response_text.endswith('}'): 
+                                    response_text = response_text.rsplit('}', 1)[0] + '}'
+                                    
+                                result = json.loads(response_text)
+                                accuracy = float(result["score"])
                                 justification = result["justification"]
-    
+                                
                                 if accuracy >= 70:
-                                    print(f"Found a good answer in chunk with accuracy: {accuracy}%")
+                                    print(f"Found a good answer (Score: {accuracy:.2f}%)")
                                     print(f"Justification: {justification}")
                                     accuracy_list.append(accuracy)
                                     break
+
                             except json.JSONDecodeError as e:
-                                print(f"Failed to parse LLM response: {str(e)}")
+                                print(f"Invalid JSON format. Using default scoring.")
+                                accuracy = 0
                                 continue
                             except Exception as e:
-                                print(f"LLM evaluation failed: {str(e)}")
+                                print(f"Evaluation failed. Using default scoring.")
+                                accuracy = 0
                                 continue
 
                     else:
@@ -877,6 +863,9 @@ if __name__ == "__main__":
                         print(f"Justification: {justification}")
                         accuracy_list.append(accuracy)
                         break
+                else:
+                    print(f"Found a good answer in codebase with accuracy: {ranked_candidates['accuracy'] }%")
+                    accuracy_list.append(ranked_candidates['accuracy'] )
                 '''
                 print("\nRe-ranked Candidates:")
                 for i, candidate in enumerate(ranked_candidates, 1):
