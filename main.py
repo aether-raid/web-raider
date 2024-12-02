@@ -18,7 +18,6 @@ import numpy as np
 from urllib.parse import urljoin
 from concurrent.futures import ThreadPoolExecutor
 from collections import Counter
-from cachetools import cached, TTLCache
 
 # - llm_rephrase(prompt): Rephrases a question using the OpenAI API.
 # - llm_prompt(prompt): Sends a prompt to the OpenAI API and returns the response.
@@ -39,7 +38,7 @@ from cachetools import cached, TTLCache
 # - extract_from_top_candidates(ranked_candidates, k=3): Extracts code from the top k ranked repositories.
 # - evaluate_model_accuracy(results, known_repos): Evaluates model accuracy by comparing found repositories with known repositories.
 
-cheatcode = " stackoverflow" # to scope down the search results to stackoverflow
+cheatcode = "" # to scope down the search results to stackoverflow
 
 
 client = OpenAI(
@@ -84,10 +83,6 @@ def llm_prompt(prompt):
     return chat_completion
 
 
-# Cache for URL status checks
-url_status_cache = TTLCache(maxsize=1000, ttl=3600)
-
-@cached(url_status_cache)
 def check_url_status(url, timeout=15):
     """Checks if a URL is accessible."""
     try:
@@ -152,7 +147,11 @@ def get_html_content(url: str):
     try:
         response = requests.get(url)
         response.raise_for_status()  # Check if the request was successful
-        return response.text  # Return the HTML content of the page
+        content_type = response.headers.get('Content-Type', '').lower()
+        if 'xml' in content_type:
+            return BeautifulSoup(response.text, 'lxml-xml', features="xml")  # Use lxml for XML content
+        else:
+            return BeautifulSoup(response.text, 'html.parser')  # Use html.parser for HTML content
     except:
         #print(f"Failed to fetch {url}")
         return 0
@@ -526,7 +525,7 @@ def evaluate_candidates_with_llm(question: str, candidates: List[dict], known_re
             Candidate Repository Content:
             {candidate['content']}
             
-            Rate the candidate repository from 0-100 based on how well it answers the question. Only reply with the number.
+            Rate the candidate repository from 0-100 based on how well it answers the question. Only reply with the number, up to 2dp and nothing else.
             """
             evaluation = llm_prompt(evaluation_prompt)
             accuracy = float(evaluation.choices[0].message.content.strip())
@@ -538,7 +537,8 @@ def evaluate_candidates_with_llm(question: str, candidates: List[dict], known_re
 
     except Exception as e:
         print(f"LLM evaluation failed: {str(e)}")
-        return {'best_candidate': None, 'accuracy': 0}
+        return {'best_candidate': None, 'accuracy': 0}, known_repo_content
+
 
 def extract_code_from_repo(url: str) -> dict:
     """Extracts code from a repository URL."""
@@ -773,7 +773,7 @@ if __name__ == "__main__":
                             Candidate Content:
                             {chunk['chunk_text']}
                             
-                            Rate the candidate content from 0-100 based on how well it answers the question. Only reply with the number.
+                            Rate the candidate content from 0-100 based on how well it answers the question. Only reply with the number, up to 2dp and nothing else.
                             """
                             try:
                                 evaluation = llm_prompt(evaluation_prompt)
