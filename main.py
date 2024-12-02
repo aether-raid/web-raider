@@ -18,7 +18,7 @@ import numpy as np
 from urllib.parse import urljoin
 from concurrent.futures import ThreadPoolExecutor
 from collections import Counter
-
+import statistics
 # - llm_rephrase(prompt): Rephrases a question using the OpenAI API.
 # - llm_prompt(prompt): Sends a prompt to the OpenAI API and returns the response.
 # - check_url_status(url, timeout=15): Checks if a URL is accessible.
@@ -38,7 +38,7 @@ from collections import Counter
 # - extract_from_top_candidates(ranked_candidates, k=3): Extracts code from the top k ranked repositories.
 # - evaluate_model_accuracy(results, known_repos): Evaluates model accuracy by comparing found repositories with known repositories.
 
-cheatcode = "" # to scope down the search results to stackoverflow
+cheatcode = " github" # to scope down the search results to stackoverflow
 
 
 client = OpenAI(
@@ -484,7 +484,7 @@ def evaluate_candidates_with_llm(question: str, candidates: List[dict], known_re
             })
 
     if not candidates_with_content:
-        return {'best_candidate': None, 'accuracy': 0}
+        return {'best_candidate': None, 'accuracy': 0}, known_repo_content
 
     # Prepare evaluation prompt
     known_repo_content = get_repo_content(known_repos[0]) if known_repos else ""
@@ -525,12 +525,20 @@ def evaluate_candidates_with_llm(question: str, candidates: List[dict], known_re
             Candidate Repository Content:
             {candidate['content']}
             
-            Rate the candidate repository from 0-100 based on how well it answers the question. Only reply with the number, up to 2dp and nothing else.
+            Rate the candidate content from 0-100 based on how well it answers the question.  Reply only with the score in 2dp and a justification of the score with a brief analysis in JSON format.
+            Reply in this exact JSON format:
+            """ + """
+            {
+                "score": XX.XX,
+                "justification": "brief analysis here"
+            }
             """
             evaluation = llm_prompt(evaluation_prompt)
-            accuracy = float(evaluation.choices[0].message.content.strip())
+            result = json.loads(evaluation.choices[0].message.content.strip())
+            accuracy = float(result["score"])
 
             if accuracy >= 70:
+                print('best_candidate: ', candidate['url'], '\naccuracy: ', accuracy )
                 return {'best_candidate': candidate['url'], 'accuracy': accuracy}
 
         return {'best_candidate': candidates_with_content[0]['url'], 'accuracy': accuracy}, known_repo_content
@@ -671,7 +679,8 @@ if __name__ == "__main__":
     - Evaluates model accuracy.
     """
     path = "C:\\Users\\65881\\Downloads\\questions.jsonl\\questions.jsonl"
-    results, known_repos = process_questions(path, limit=5)
+    results, known_repos = process_questions(path, limit=3)
+    accuracy_list = []
     
     print("\nProcessing Results:")
     for title, data in results.items():
@@ -764,28 +773,47 @@ if __name__ == "__main__":
                             evaluation_prompt = f"""
                             Question: {title}
                             
-                            Evaluate the following content to determine if it answers the question.
+                            Evaluate the following GitHub repository content to determine if it answers the question.
                             Use the known repository content as a reference model answer.
                             
                             Known Repository Content:
                             {known_repo_content}
                             
-                            Candidate Content:
-                            {chunk['chunk_text']}
+                            Candidate Repository Content:
+                            {chunk}
                             
-                            Rate the candidate content from 0-100 based on how well it answers the question. Only reply with the number, up to 2dp and nothing else.
+                            Rate the candidate content from 0-100 based on how well it answers the question.  Reply only with the score in 2dp and a justification of the score with a brief analysis in JSON format.
+                            Reply in this exact JSON format:
+                            """ + """
+                            {
+                                "score": XX.XX,
+                                "justification": "brief analysis here"
+                            }
                             """
                             try:
                                 evaluation = llm_prompt(evaluation_prompt)
-                                accuracy = float(evaluation.choices[0].message.content.strip())
-                                
+                                result = json.loads(evaluation.choices[0].message.content.strip())
+                                accuracy = float(result["score"])  # This will give you the score as a float
+                                justification = result["justification"]
+    
                                 if accuracy >= 70:
                                     print(f"Found a good answer in chunk with accuracy: {accuracy}%")
+                                    print(f"Justification: {justification}")
+                                    accuracy_list.append(accuracy)
                                     break
+                            except json.JSONDecodeError as e:
+                                print(f"Failed to parse LLM response: {str(e)}")
+                                continue
                             except Exception as e:
                                 print(f"LLM evaluation failed: {str(e)}")
                                 continue
-                
+
+                    else:
+                        print(f"Found a good answer in chunk with accuracy: {accuracy}%")
+                        print(f"Justification: {justification}")
+                        accuracy_list.append(accuracy)
+                        break
+                '''
                 print("\nRe-ranked Candidates:")
                 for i, candidate in enumerate(ranked_candidates, 1):
                     print(f"\n{i}. {candidate['url']}")
@@ -809,10 +837,11 @@ if __name__ == "__main__":
                         # Print first 500 characters of code with ellipsis if longer
                         print(code_block[:500] + ("..." if len(code_block) > 500 else ""))
                         print("-" * 50)
-
+'''
     print("\nEvaluating Results...")
-    metrics = evaluate_model_accuracy(results, known_repos)
+    print(statistics.mean(accuracy_list))
+    #metrics = evaluate_model_accuracy(results, known_repos)
     
-    print(f"\nOverall Accuracy: {metrics['overall_accuracy']:.2%}")
-    print(f"Total Matches: {metrics['total_matches']}")
-    print(f"Total Known Repositories: {metrics['total_repos']}")
+    #print(f"\nOverall Accuracy: {metrics['overall_accuracy']:.2%}")
+    #print(f"Total Matches: {metrics['total_matches']}")
+    #print(f"Total Known Repositories: {metrics['total_repos']}")
