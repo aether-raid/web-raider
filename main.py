@@ -150,7 +150,7 @@ def get_html_content(url: str):
         response.raise_for_status()  # Check if the request was successful
         content_type = response.headers.get('Content-Type', '').lower()
         if 'xml' in content_type:
-            return BeautifulSoup(response.text, 'lxml-xml')  # Use lxml for XML content
+            return BeautifulSoup(response.text, 'lxml-xml', features="xml")  # Use lxml for XML content
         else:
             return BeautifulSoup(response.text, 'html.parser')  # Use html.parser for HTML content
     except:
@@ -526,7 +526,7 @@ def evaluate_candidates_with_llm(question: str, candidates: List[dict], known_re
             Candidate Repository Content:
             {candidate['content']}
             
-            Rate the candidate repository from 0-100 based on how well it answers the question. Only reply with the number.
+            Rate the candidate repository from 0-100 based on how well it answers the question. Only reply with the number, up to 2dp and nothing else.
             """
             evaluation = llm_prompt(evaluation_prompt)
             accuracy = float(evaluation.choices[0].message.content.strip())
@@ -538,7 +538,8 @@ def evaluate_candidates_with_llm(question: str, candidates: List[dict], known_re
 
     except Exception as e:
         print(f"LLM evaluation failed: {str(e)}")
-        return {'best_candidate': None, 'accuracy': 0}
+        return {'best_candidate': None, 'accuracy': 0}, known_repo_content
+
 
 def extract_code_from_repo(url: str) -> dict:
     """Extracts code from a repository URL."""
@@ -684,7 +685,7 @@ if __name__ == "__main__":
     - Evaluates model accuracy.
     """
     path = "C:\\Users\\LENOVO\\OneDrive\\Documents\\Desktop\\RAiD-Repo\\web-raider\\questions.jsonl"
-    results, known_repos = process_questions(path, limit=5)
+    results, known_repos = process_questions(path, limit=1)
     
     print("\nProcessing Results:")
     for title, data in results.items():
@@ -786,7 +787,7 @@ if __name__ == "__main__":
                             Candidate Content:
                             {chunk['chunk_text']}
                             
-                            Rate the candidate content from 0-100 based on how well it answers the question. Only reply with the number.
+                            Rate the candidate content from 0-100 based on how well it answers the question. Only reply with the number, up to 2dp and nothing else.
                             """
                             try:
                                 evaluation = llm_prompt(evaluation_prompt)
