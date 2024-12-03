@@ -337,9 +337,11 @@ def process_questions(path: str, limit: int = 5):
     title_repo = {}
     
     for line in lines:
-        try:
+        # try:
             json_data = json.loads(line)
             org_question = Question(**json_data)
+            check_query_type(org_question.Title)
+            '''
             print("\nProcessing question:", org_question.Id)
             print("Original question:", org_question.Title)
             
@@ -396,6 +398,7 @@ def process_questions(path: str, limit: int = 5):
             continue
 
     return title_repo, ans_title_repo
+    '''
 
 def analyze_similarity_and_extract_links(question: str, processed_content: dict, top_k: int = 25):
     """Analyzes chunk similarity using LSA and extracts codebase links from top chunks."""
@@ -715,8 +718,8 @@ if __name__ == "__main__":
     - Evaluates model accuracy.
     """
     path = "../web-raider/questions.jsonl"
-            if check_query_type(title) != 'codebase':
-            continue
+    if check_query_type(title) != 'codebase':
+        continue
     results, known_repos = process_questions(path, limit=3)
     accuracy_list = []
     
