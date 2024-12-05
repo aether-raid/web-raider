@@ -536,11 +536,10 @@ def process_questions(path: str, limit: int = 5):
     title_repo = {}
     
     for line in lines:
-        # try:
+        try:
             json_data = json.loads(line)
             org_question = Question(**json_data)
             check_query_type(org_question.Title)
-            '''
             print("\nProcessing question:", org_question.Id)
             print("Original question:", org_question.Title)
             #print("Question body:", org_question.Body)
@@ -1196,22 +1195,22 @@ if __name__ == "__main__":
 
 
 
-#if __name__ == "__main__":
-    #print("Running main function")
-    """
-    Main function to process questions and evaluate results.
-    - Reads questions line by line from questions.jsonl file.
-    - Load into Question object
-    - Search web using Question.Title for top 10 results
-    - Chunk and vectorise
-    - After chunking, use Latent Semantic Analysis to do cosine similarity and get top 25 chunks
-    - Pass into LLm to evaluate each chunk with the Question.Title, Question.Body and come out with a total average score with one top answer(Question.Body needs to be cleaned)
-    - Save results to jsonl file (Generate answer with chunks as context)
-    """
-    '''
-    path = "C:\\Users\\65881\\Downloads\\questions.jsonl\\questions.jsonl"
-    results, candidate_link_list = update_process_questions(path, limit=10)
-    '''
+# #if __name__ == "__main__":
+#     #print("Running main function")
+#     """
+#     Main function to process questions and evaluate results.
+#     - Reads questions line by line from questions.jsonl file.
+#     - Load into Question object
+#     - Search web using Question.Title for top 10 results
+#     - Chunk and vectorise
+#     - After chunking, use Latent Semantic Analysis to do cosine similarity and get top 25 chunks
+#     - Pass into LLm to evaluate each chunk with the Question.Title, Question.Body and come out with a total average score with one top answer(Question.Body needs to be cleaned)
+#     - Save results to jsonl file (Generate answer with chunks as context)
+#     """
+#     '''
+#     path = "C:\\Users\\65881\\Downloads\\questions.jsonl\\questions.jsonl"
+#     results, candidate_link_list = update_process_questions(path, limit=10)
+#     '''
 
         
 
