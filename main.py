@@ -255,7 +255,8 @@ def check_json_file(question, file_name='results.jsonl'):
             for line in f:
                 data = json.loads(line)
                 if data["question"] == question:
-                    return data
+                    #return QueryType(**data)
+                    return QueryType(**data)
     except:
         return None
     return None
@@ -298,7 +299,7 @@ def check_query_type(question, file_name='results.jsonl'):
         except Exception as e:
             print(f"LLM evaluation failed: {str(e)}")
             return None
-    return check_json_file(question)["choices"]
+    return check_json_file(question).choices
 
 
 def llm_rephrase(title: str, body: str = ""):
@@ -535,9 +536,11 @@ def process_questions(path: str, limit: int = 5):
     title_repo = {}
     
     for line in lines:
-        try:
+        # try:
             json_data = json.loads(line)
             org_question = Question(**json_data)
+            check_query_type(org_question.Title)
+            '''
             print("\nProcessing question:", org_question.Id)
             print("Original question:", org_question.Title)
             #print("Question body:", org_question.Body)
@@ -824,7 +827,7 @@ def evaluate_candidates_with_llm(question: str, candidates: List[dict], known_re
     - Dictionary with the best candidate link and its accuracy score (dict)
     """
     if not candidates:
-        return {'best_candidate': None, 'accuracy': 0}
+        return {'best_candidate': None, 'accuracy': 0}, known_repo_content
 
     # Get content for top candidates
     candidates_with_content = []

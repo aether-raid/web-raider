@@ -168,3 +168,5 @@ testbed.ipynb
 
 # excude the questions.jsonl file
 questions.jsonl
+web-raider-venv/*
+web-raider-venv/Scripts/activate
