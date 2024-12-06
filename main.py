@@ -1076,7 +1076,7 @@ def score_model_answer(question_title: str, cleaned_body: str, model_answer: str
 if __name__ == "__main__":
     print("Running main function")
     path = "../web-raider/first_200_questions.jsonl"
-
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
     query_count = 0
     with open(path, "r") as file:
         for line in file:
