@@ -1073,8 +1073,6 @@ def score_model_answer(question_title: str, cleaned_body: str, model_answer: str
         print(f"Error scoring model answer: {str(e)}")
         return {"score": 0, "justification": "Error occurred during evaluation."}
 
-
-
 if __name__ == "__main__":
     print("Running main function")
     path = "../web-raider/questions.jsonl"
@@ -1082,9 +1080,7 @@ if __name__ == "__main__":
     query_count = 0
     with open(path, "r") as file:
         for line in file:
-            for i in range (skip):
-                file.readline()
-            if query_count >= 11:
+            if query_count >= 1000:
                 break
                 
             # Load question into object
