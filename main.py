@@ -20,6 +20,7 @@ from concurrent.futures import ThreadPoolExecutor
 from collections import Counter
 import statistics
 import pickle
+import time
 from typing import List, Dict, Optional
 import json
 from datetime import datetime
@@ -1095,12 +1096,12 @@ if __name__ == "__main__":
 
             # Search web using question title
             retry = 0
-            While retry < 5:
-                Try:
+            while retry < 5:
+                try:
                     search_results = list(search(question.Title, stop=10))
                     print(f"Found {len(search_results)} search results")
                     break
-                Except:
+                except:
                     time.sleep(600)
                     retry += 1
                 
@@ -1187,16 +1188,9 @@ if __name__ == "__main__":
             save_query_results(
                 question_title=question.Title,
                 cleaned_body= cleaned_body,
-                model_answer=model_answer_text
+                model_answer=model_answer_text,
+                model_answer_score=model_answer_score['score']
             )
-            #model_answer_score=model_answer_score['score'],model_answer_justification=model_answer_score['justification']
-                # Save results
-                save_query_results(
-                    question_title=question.Title,
-                    cleaned_body= cleaned_body,
-                    model_answer=model_answer_text,
-                    model_answer_score=model_answer_score['score']
-                )
                 #model_answer_justification=model_answer_score['justification']
 
             query_count += 1
