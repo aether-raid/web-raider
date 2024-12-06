@@ -197,7 +197,7 @@ def save_query_results(
     question_title: str,
     cleaned_body: str,
     model_answer: str,
-    #model_answer_score: float,
+    model_answer_score: float,
     #model_answer_justification: str,
     file_path: str = 'query_results.jsonl'
 ) -> bool:
@@ -205,8 +205,8 @@ def save_query_results(
         query_result = {
             "question_title": question_title,
             "question_body": cleaned_body,
-            "model_answer": model_answer
-            #"model_answer_score": model_answer_score,
+            "model_answer": model_answer,
+            "model_answer_score": model_answer_score
             #"model_answer_justification": model_answer_justification
         }
         
@@ -324,7 +324,7 @@ def llm_rephrase(title: str, body: str = ""):
                 'content': prompt,
             }
         ],
-        model='mistral',
+        model='llamma3.1',
         temperature=0,
     )
     return chat_completion
@@ -338,7 +338,7 @@ def llm_prompt(prompt):
                 'content': f'{prompt}',
             }
         ],
-        model='mistral',
+        model='llama3.1',
         temperature=0,
     )
     return chat_completion
@@ -540,6 +540,7 @@ def process_questions(path: str, limit: int = 5):
             json_data = json.loads(line)
             org_question = Question(**json_data)
             check_query_type(org_question.Title)
+
             print("\nProcessing question:", org_question.Id)
             print("Original question:", org_question.Title)
             #print("Question body:", org_question.Body)
@@ -1051,17 +1052,16 @@ def score_model_answer(question_title: str, cleaned_body: str, model_answer: str
         - Practical examples and implementation details (+5-10)
         - Addressing edge cases or potential issues (+5-10)
 
+        IMPORTANT: The score must be a numerical value between 00.00 and 100.00.
+        IMPORTANT: No line breaks or special characters
+        IMPORTANT: Use only regular quotes ('') and escape them if needed
+        IMPORTANT: Justification should be concise and in a single line
+
         Provide your evaluation in the following JSON format:
         {{
             "score": XX.XX,
             "justification": "Detailed analysis of the answer's strengths and areas for improvement, with specific examples from the response."
         }}
-        IMPORTANT: The score must be a numerical value between 20 and 100.
-        Example response format:
-        {
-            "score": 85.5,
-            "justification": "This answer provides comprehensive coverage..."
-        }
         """
         
         score_response = llm_prompt(score_prompt)
@@ -1074,7 +1074,7 @@ def score_model_answer(question_title: str, cleaned_body: str, model_answer: str
 
 if __name__ == "__main__":
     print("Running main function")
-    path = "C:\\Users\\65881\\Downloads\\questions.jsonl\\questions.jsonl"
+    path = "../web-raider/questions.jsonl"
 
     query_count = 0
     with open(path, "r") as file:
@@ -1177,9 +1177,10 @@ if __name__ == "__main__":
                 save_query_results(
                     question_title=question.Title,
                     cleaned_body= cleaned_body,
-                    model_answer=model_answer_text
+                    model_answer=model_answer_text,
+                    model_answer_score=model_answer_score['score']
                 )
-                #model_answer_score=model_answer_score['score'],model_answer_justification=model_answer_score['justification']
+                #model_answer_justification=model_answer_score['justification']
 
                 query_count += 1
 
@@ -1188,33 +1189,6 @@ if __name__ == "__main__":
             del()
 
     print(f"\nFinished processing {query_count} queries")
-
-    
-
-
-
-
-
-# #if __name__ == "__main__":
-#     #print("Running main function")
-#     """
-#     Main function to process questions and evaluate results.
-#     - Reads questions line by line from questions.jsonl file.
-#     - Load into Question object
-#     - Search web using Question.Title for top 10 results
-#     - Chunk and vectorise
-#     - After chunking, use Latent Semantic Analysis to do cosine similarity and get top 25 chunks
-#     - Pass into LLm to evaluate each chunk with the Question.Title, Question.Body and come out with a total average score with one top answer(Question.Body needs to be cleaned)
-#     - Save results to jsonl file (Generate answer with chunks as context)
-#     """
-#     '''
-#     path = "C:\\Users\\65881\\Downloads\\questions.jsonl\\questions.jsonl"
-#     results, candidate_link_list = update_process_questions(path, limit=10)
-#     '''
-
-        
-
-            
 
 
 
