@@ -1094,9 +1094,17 @@ if __name__ == "__main__":
             cleaned_body = clean_text(question.Body) if question.Body else ""
 
             # Search web using question title
-            search_results = list(search(question.Title, stop=10))
-            print(f"Found {len(search_results)} search results")
-
+            retry = 0
+            While retry < 5:
+                Try:
+                    search_results = list(search(question.Title, stop=10))
+                    print(f"Found {len(search_results)} search results")
+                    break
+                Except:
+                    time.sleep(600)
+                    retry += 1
+                
+            
             # Extract links from search results
             link_list = []
             for link in search_results:
