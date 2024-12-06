@@ -1078,11 +1078,13 @@ def score_model_answer(question_title: str, cleaned_body: str, model_answer: str
 if __name__ == "__main__":
     print("Running main function")
     path = "../web-raider/questions.jsonl"
-
+    skip = 11
     query_count = 0
     with open(path, "r") as file:
         for line in file:
-            if query_count >= 1000:
+            for i in range (skip):
+                file.readline()
+            if query_count >= 11:
                 break
                 
             # Load question into object
