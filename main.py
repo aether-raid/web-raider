@@ -1080,20 +1080,11 @@ if __name__ == "__main__":
     query_count = 0
     with open(path, "r") as file:
         for line in file:
-            file.readline()
-            file.readline()
-            file.readline()
-            file.readline()
-            file.readline()
-            file.readline()
-            file.readline()
-            file.readline()
-            file.readline()
-            file.readline()
-            file.readline()
-            if query_count >= 10:
-                 break
-                
+            if query_count >= 100:
+                break
+            if query_count < skip:
+                query_count += 1
+                continue
             # Load question into object
             json_data = json.loads(line)
             question = Question(**json_data)
