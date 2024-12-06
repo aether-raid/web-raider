@@ -1082,7 +1082,18 @@ if __name__ == "__main__":
     query_count = 0
     with open(path, "r") as file:
         for line in file:
-            if query_count >= 1000:
+            file.readline()
+            file.readline()
+            file.readline()
+            file.readline()
+            file.readline()
+            file.readline()
+            file.readline()
+            file.readline()
+            file.readline()
+            file.readline()
+            file.readline()
+            if query_count >= 10:
                 break
                 
             # Load question into object
