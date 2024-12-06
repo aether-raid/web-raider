@@ -1072,6 +1072,8 @@ def score_model_answer(question_title: str, cleaned_body: str, model_answer: str
         print(f"Error scoring model answer: {str(e)}")
         return {"score": 0, "justification": "Error occurred during evaluation."}
 
+
+
 if __name__ == "__main__":
     print("Running main function")
     path = "../web-raider/questions.jsonl"
@@ -1081,98 +1083,113 @@ if __name__ == "__main__":
         for line in file:
             if query_count >= 1000:
                 break
-            if True:
-                # Load question into object
-                json_data = json.loads(line)
-                question = Question(**json_data)
-                print(f"\nProcessing question {question.Id}")
-                print(f"Original question: {question.Title}")
+                
+            # Load question into object
+            json_data = json.loads(line)
+            question = Question(**json_data)
+            print(f"\nProcessing question {question.Id}")
+            print(f"Original question: {question.Title}")
 
-                # Clean question body
-                cleaned_body = clean_text(question.Body) if question.Body else ""
+            # Clean question body
+            cleaned_body = clean_text(question.Body) if question.Body else ""
 
-                # Search web using question title
-                search_results = list(search(question.Title, stop=10))
-                print(f"Found {len(search_results)} search results")
-
-                # Extract links from search results
-                link_list = []
-                for link in search_results:
-                    try:
-                        content = get_html_content(link)
-                        content = clean_text(content) if content else ""
-                        if content:
-                            extracted_links = extract_links(content)
-                            link_list.extend(extracted_links)
-                    except Exception as e:
-                        print(f"Error processing link {link}: {str(e)}")
-                        continue
-
-                # Classify links
-                classified_links = classifier(list(link_list + search_results))
-                processed_data = process_and_vectorize_content(classified_links)
-
-                if not processed_data:
-                    print("No content could be processed")
+            # Search web using question title
+            retry = 0
+            While retry < 5:
+                Try:
+                    search_results = list(search(question.Title, stop=10))
+                    print(f"Found {len(search_results)} search results")
+                    break
+                Except:
+                    time.sleep(600)
+                    retry += 1
+                
+            
+            # Extract links from search results
+            link_list = []
+            for link in search_results:
+                try:
+                    content = get_html_content(link)
+                    content = clean_text(content) if content else ""
+                    if content:
+                        extracted_links = extract_links(content)
+                        link_list.extend(extracted_links)
+                except Exception as e:
+                    print(f"Error processing link {link}: {str(e)}")
                     continue
 
-                # Analyze chunks
-                print("\nEvaluating top similar chunks...")
-                analysis = analyze_similarity_and_extract_links(
-                    question=question.Title,
-                    processed_content=processed_data,
-                    top_k=10
-                )
+            # Classify links
+            classified_links = classifier(list(link_list + search_results))
+            processed_data = process_and_vectorize_content(classified_links)
 
-                if not analysis:
-                    print("No analysis results generated")
-                    continue
+            if not processed_data:
+                print("No content could be processed")
+                continue
 
-                model_answer = ""
-                for results in analysis["top_chunks"]:
-                    model_answer += results["chunk_text"]
+            # Analyze chunks
+            print("\nEvaluating top similar chunks...")
+            analysis = analyze_similarity_and_extract_links(
+                question=question.Title,
+                processed_content=processed_data,
+                top_k=10
+            )
 
-                # Generate model answer using question title and body
-                model_answer_prompt = f"""
-                Question: {question.Title}
-                Search Results: {model_answer}
+            if not analysis:
+                print("No analysis results generated")
+                continue
 
-                Please generate a comprehensive answer to the question based on the provided search results. Follow these requirements:
+            model_answer = ""
+            for results in analysis["top_chunks"]:
+                model_answer += results["chunk_text"]
 
-                1. Content Requirements:
-                - Start with a clear, direct answer to the main question
-                - Support key points with specific references to the search results
-                - Ensure all crucial aspects of the question are addressed
-                - Maintain logical flow and coherence throughout the response
-                - Provide relevant examples or explanations where appropriate
+            # Generate model answer using question title and body
+            model_answer_prompt = f"""
+            Question: {question.Title}
+            Search Results: {model_answer}
 
-                2. Formatting Requirements:
-                - Structure the answer using proper markdown formatting
-                - Use headers (##) to organize main sections if the answer is complex
-                - Format any code snippets using appropriate markdown code blocks
-                - Use italics (*) for emphasis on key terms when relevant
-                - Include proper paragraph breaks for readability
+            Please generate a comprehensive answer to the question based on the provided search results. Follow these requirements:
 
-                3. Citation Requirements:
-                - Reference specific parts of the search results to support claims
-                - Use inline citations by mentioning "According to the search results..."
-                - Maintain clear connection between assertions and source material
+            1. Content Requirements:
+            - Start with a clear, direct answer to the main question
+            - Support key points with specific references to the search results
+            - Ensure all crucial aspects of the question are addressed
+            - Maintain logical flow and coherence throughout the response
+            - Provide relevant examples or explanations where appropriate
 
-                4. Quality Check:
-                - Ensure the answer directly addresses the original question
-                - Verify that all information comes from the provided search results
-                - Maintain consistent tone and professional language throughout
-                - Check that the response flows logically from point to point
+            2. Formatting Requirements:
+            - Structure the answer using proper markdown formatting
+            - Use headers (##) to organize main sections if the answer is complex
+            - Format any code snippets using appropriate markdown code blocks
+            - Use italics (*) for emphasis on key terms when relevant
+            - Include proper paragraph breaks for readability
 
-                Return ONLY the formatted answer text, with no additional meta-text or formatting instructions.
-                """
+            3. Citation Requirements:
+            - Reference specific parts of the search results to support claims
+            - Use inline citations by mentioning "According to the search results..."
+            - Maintain clear connection between assertions and source material
 
-                model_answer = llm_prompt(model_answer_prompt)
-                model_answer_text = model_answer.choices[0].message.content.strip()
+            4. Quality Check:
+            - Ensure the answer directly addresses the original question
+            - Verify that all information comes from the provided search results
+            - Maintain consistent tone and professional language throughout
+            - Check that the response flows logically from point to point
 
-                # Score the model answer
-                model_answer_score = score_model_answer(question.Title, cleaned_body, model_answer_text)
+            Return ONLY the formatted answer text, with no additional meta-text or formatting instructions.
+            """
 
+            model_answer = llm_prompt(model_answer_prompt)
+            model_answer_text = model_answer.choices[0].message.content.strip()
+
+            # Score the model answer
+            model_answer_score = score_model_answer(question.Title, cleaned_body, model_answer_text)
+
+            # Save results
+            save_query_results(
+                question_title=question.Title,
+                cleaned_body= cleaned_body,
+                model_answer=model_answer_text
+            )
+            #model_answer_score=model_answer_score['score'],model_answer_justification=model_answer_score['justification']
                 # Save results
                 save_query_results(
                     question_title=question.Title,
@@ -1182,9 +1199,9 @@ if __name__ == "__main__":
                 )
                 #model_answer_justification=model_answer_score['justification']
 
-                query_count += 1
+            query_count += 1
 
-           
+       
 
             del()
 
