@@ -90,7 +90,7 @@ def check_query_type(question, file_name='results.jsonl'):
                 {{
                     "question": "{question}",
                     "justification": "<brief-analysis-here>",
-                    "choices": ["codebase", "article", "forum"],
+                    "choices": [<"codebase", "article", "forum">],
                     "confidence": "<XX.XX>"
                 }}
                 Remember to consider the nature of the question and the type of information that is likely to be found on each platform.
@@ -98,8 +98,9 @@ def check_query_type(question, file_name='results.jsonl'):
                 2. Articles are detailed explanations or tutorials that can provide in-depth knowledge on a topic.
                 3. Forums are discussion platforms where users can ask questions and receive answers from the community.
                 4. Justification should be a brief analysis of why you think the platform you chose is the most suitable.
-                5. Confidence level should be a number between 0.00-100.00, with an accuracy of up to 2 decimal points.
-                6. ONLY reply with the dictionary format and do not add any other unnecessary text or symbols.
+                5. Choices should be a list of strings with the options "codebase", "article", and "forum" where the most suitable option is placed first, and the least suitable is placed last, remove the other options if they are not suitable.
+                6. Confidence level should be a number between 0.00-100.00, with an accuracy of up to 2 decimal points.
+                7. ONLY reply with the dictionary format and do not add any other unnecessary text or symbols.
                 """)
             # save object to json object
             json_obj = json.loads(query_type.choices[0].message.content)
@@ -333,72 +334,12 @@ def process_questions(path: str, limit: int = 5):
             if line:
                 lines.append(line)
 
-    ans_title_repo = {}
-    title_repo = {}
-    
     for line in lines:
         # try:
             json_data = json.loads(line)
             org_question = Question(**json_data)
             check_query_type(org_question.Title)
-            '''
-            print("\nProcessing question:", org_question.Id)
-            print("Original question:", org_question.Title)
-            
-            # Store known repos with normalized URLs
-            known_repos = list(org_question.Repos)
-            ans_title_repo[org_question.Title] = known_repos
-            
-            # Get rephrased question
-            rep_question = llm_rephrase(org_question.Title)
-            rephrased = rep_question.choices[0].message.content  + cheatcode
-            print("Rephrased question:", rephrased)
-            
-            # Get search results
-            search_results = list(search(rephrased, stop=10))  # Convert generator to list
-            print("Found initial results:", len(search_results))
 
-            # Extract links from content
-            link_list = []
-            for link in search_results:
-                content = get_html_content(link)
-                content = clean_text(content)
-                if content:
-                    extracted_links = extract_links(content)
-                    link_list.extend(extracted_links)
-
-            # Normalize and classify all links
-            classified_links = classifier(list(link_list + search_results))
-            
-            # Process and vectorize content
-            processed_data = process_and_vectorize_content(classified_links)
-            
-            # Store results with additional metadata
-            title_repo[org_question.Title] = {
-                'classified_links': classified_links,
-                'processed_content': processed_data,
-                'original_question': org_question.Title,
-                'rephrased_question': rephrased,
-                'question_id': org_question.Id
-            }
-
-            # Print statistics
-            print(f"\nClassified results:")
-            print(f"- Codebases: {len(classified_links['codebases'])}")
-            print(f"- Articles: {len(classified_links['articles'])}")
-            print(f"- Forums: {len(classified_links['forums'])}")
-            
-            if processed_data:
-                print(f"\nProcessed content:")
-                print(f"- Total chunks: {processed_data['vectors'].shape[0]}")
-                print(f"- Vector dimensions: {processed_data['vectors'].shape[1]}")
-
-        except Exception as e:
-            print(f"Error processing question: {str(e)}")
-            continue
-
-    return title_repo, ans_title_repo
-    '''
 
 def analyze_similarity_and_extract_links(question: str, processed_content: dict, top_k: int = 25):
     """Analyzes chunk similarity using LSA and extracts codebase links from top chunks."""
@@ -718,189 +659,9 @@ if __name__ == "__main__":
     - Evaluates model accuracy.
     """
     path = "../web-raider/questions.jsonl"
-    if check_query_type(title) != 'codebase':
-        continue
-    results, known_repos = process_questions(path, limit=3)
+    results, known_repos = process_questions(path, limit=1000)
     accuracy_list = []
-    
-    print("\nProcessing Results:")
-    for title, data in results.items():
-        print(f"\n{'='*50}")
-        print(f"Question: {title}")
-        
-        # Print classification results
-        classified_links = data['classified_links']
-        print("\nClassified Links:")
-        print(f"- Codebases: {len(classified_links['codebases'])}")
-        print(f"- Articles: {len(classified_links['articles'])}")
-        print(f"- Forums: {len(classified_links['forums'])}")
-        
-        # Print known repositories
-        known_repos_list = known_repos[title]
-        print(f"\nKnown repositories: {len(known_repos_list)}")
-        
-        # Print processed content statistics
-        processed_content = data['processed_content']
-        if processed_content:
-            articles = processed_content['content']['articles']
-            forums = processed_content['content']['forums']
-            
-            print(f"\nProcessed Content Statistics:")
-            print(f"- Articles processed: {len(articles)}")
-            print(f"- Forums processed: {len(forums)}")
-            print(f"- Total vectors: {processed_content['vectors'].shape[0]}")
-            
-            # Analyze similarity and extract links
-            print("\nAnalyzing content similarity...")
-            analysis = analyze_similarity_and_extract_links(
-                question=title,
-                processed_content=processed_content,
-                top_k=25
-            )
-            
-            if analysis:
-                print("\nTop Similar Chunks:")
-                for i, chunk in enumerate(analysis['top_chunks'], 1):
-                    print(f"\n{i}. From {chunk['content_type']} ({chunk['url']}):")
-                    print(f"Similarity Score: {chunk['similarity_score']:.4f}")
-                    print("Preview:", chunk['chunk_text'][:200] + "...")
-                    if chunk['found_codebase_links']:
-                        print("Found codebase links:")
-                        for link in chunk['found_codebase_links']:
-                            print(f"- {link}")
-                
-                # Repository matching
-                known = set(known_repos_list)
-                found = set(analysis['all_codebase_links'])
-                matches = known.intersection(found)
-                
-                print(f"\nRepository Matching:")
-                print(f"Found {len(matches)} out of {len(known)} known repositories")
-                if matches:
-                    print("Matched repositories:")
-                    for repo in matches:
-                        print(f"- {repo}")
-                
-                # Create and rank candidate list
-                candidates = create_candidate_list(
-                    classified_links=classified_links,
-                    analysis_results=analysis
-                )
-                
-                # Ensure the candidate list only contains codebase links
-                candidates = [candidate for candidate in candidates if candidate['url'] in classified_links['codebases']]
-                
-                print("\nCandidate List (by occurrences):")
-                for i, candidate in enumerate(candidates, 1):
-                    print(f"{i}. {candidate['url']} (occurrences: {candidate['occurrences']})")
 
-                # evaluate with LLM
-                ranked_candidates, known_repo_content = evaluate_candidates_with_llm(
-                    question=title,
-                    candidates=candidates,
-                    known_repos=known_repos_list
-                )
-                
-                if ranked_candidates['accuracy'] < 50:
-                    print("\nEvaluating top similar chunks...")
-                    analysis = analyze_similarity_and_extract_links(
-                        question=title,
-                        processed_content=processed_content,
-                        top_k=25
-                    )
-                    
-                    if analysis:
-                        for chunk in analysis['top_chunks']:
-                            evaluation_prompt = f"""You are a strict JSON validator. Your ONLY task is to output a score and justification in JSON format.
-                            STOP AND RECHECK: If your response is not in this EXACT format, it is wrong!
-
-                            EXACTLY COPY THIS FORMAT (replacing only the values):
-                            {{
-                                "score": 60.00,
-                                "justification": "Repository does not provide direct sorting examples"
-                            }}
-
-                            Question: {title}
-                            Content to evaluate: {chunk}
-
-                            FINAL CHECK:
-                            - Is your response ONLY the JSON object? 
-                            - Is the score a number with 2 decimal places?
-                            - Is there NO additional text before or after?
-                            - Is there NO newline in the response?
-                            """
-                            
-                            try:
-                                evaluation = llm_rephrase(evaluation_prompt)
-                                response_text = evaluation.choices[0].message.content.strip()
-                                
-                                # Clean the response to ensure valid JSON
-                                response_text = response_text.replace('\n', ' ').replace('\r', '')
-                                response_text = response_text.strip()
-                                if not response_text.startswith('{'): 
-                                    response_text = '{' + response_text.split('{', 1)[1]
-                                if not response_text.endswith('}'): 
-                                    response_text = response_text.rsplit('}', 1)[0] + '}'
-                                    
-                                result = json.loads(response_text)
-                                accuracy = float(result["score"])
-                                justification = result["justification"]
-                                
-                                if accuracy >= 70:
-                                    print(f"Found a good answer (Score: {accuracy:.2f}%)")
-                                    print(f"Justification: {justification}")
-                                    accuracy_list.append(accuracy)
-                                    break
-
-                            except json.JSONDecodeError as e:
-                                print(f"Invalid JSON format. Using default scoring.")
-                                accuracy = 0
-                                continue
-                            except Exception as e:
-                                print(f"Evaluation failed. Using default scoring.")
-                                accuracy = 0
-                                continue
-
-                    else:
-                        print(f"Found a good answer in chunk with accuracy: {accuracy}%")
-                        print(f"Justification: {justification}")
-                        accuracy_list.append(accuracy)
-                        break
-                else:
-                    print(f"Found a good answer in codebase with accuracy: {ranked_candidates['accuracy'] }%")
-                    accuracy_list.append(ranked_candidates['accuracy'] )
-                '''
-                print("\nRe-ranked Candidates:")
-                for i, candidate in enumerate(ranked_candidates, 1):
-                    print(f"\n{i}. {candidate['url']}")
-                    print(f"Occurrences: {candidate['occurrences']}")
-                    print(f"LLM Score: {candidate.get('llm_score', 'N/A')}")
-                    print(f"Combined Score: {candidate.get('combined_score', 'N/A')}")
-                    print(f"Reasoning: {candidate.get('reasoning', 'N/A')}")
-                
-                # Extract code from top repositories
-                print("\nExtracting code from top repositories...")
-                code_results = extract_from_top_candidates(ranked_candidates, k=1)
-                
-                print("\nExtracted Code:")
-                for i, result in enumerate(code_results, 1):
-                    print(f"\n{i}. Repository: {result['url']}")
-                    print(f"Rank Score: {result['rank_score']}")
-                    print(f"LLM Reasoning: {result['llm_reasoning']}")
-                    print("\nCode Blocks:")
-                    for j, code_block in enumerate(result['code_blocks'], 1):
-                        print(f"\nBlock {j}:")
-                        # Print first 500 characters of code with ellipsis if longer
-                        print(code_block[:500] + ("..." if len(code_block) > 500 else ""))
-                        print("-" * 50)
-'''
-    print("\nEvaluating Results...")
-    print(statistics.mean(accuracy_list))
-    #metrics = evaluate_model_accuracy(results, known_repos)
-    
-    #print(f"\nOverall Accuracy: {metrics['overall_accuracy']:.2%}")
-    #print(f"Total Matches: {metrics['total_matches']}")
-    #print(f"Total Known Repositories: {metrics['total_repos']}")
 
 
         

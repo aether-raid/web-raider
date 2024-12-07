@@ -1,0 +1,3 @@
+# read from results.json and generate a report
+# sample of a json line {"question": "How do you run CMD.exe under the Local System Account?", "justification": "The most suitable platform to find an answer is a forum, as it allows for community-driven discussions and Q&A, which can provide specific guidance on running CMD.exe under the Local System Account.", "choices": ["forum"], "confidence": "80.00"}
+# show a bar chart of the count of each of the first choices 
