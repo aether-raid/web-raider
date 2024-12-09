@@ -124,11 +124,13 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.vs/
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
+web-raider-venv/
 
 # Spyder project settings
 .spyderproject
@@ -168,5 +170,4 @@ testbed.ipynb
 
 # excude the questions.jsonl file
 questions.jsonl
-web-raider-venv/*
 web-raider-venv/Scripts/activate
