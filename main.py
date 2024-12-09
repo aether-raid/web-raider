@@ -20,6 +20,12 @@ from concurrent.futures import ThreadPoolExecutor
 from collections import Counter
 import statistics
 import pickle
+import time
+from typing import List, Dict, Optional
+import json
+from datetime import datetime
+from pydantic import BaseModel
+import numpy as np
 
 # - llm_rephrase(prompt): Rephrases a question using the OpenAI API.
 # - llm_prompt(prompt): Sends a prompt to the OpenAI API and returns the response.
@@ -61,6 +67,188 @@ class QueryType(BaseModel):
     justification: str
     choices: List[str]
     confidence: float
+
+class ChunkResult:
+    def __init__(self, content_type: str, url: str, similarity_score: float, chunk_text: str, found_codebase_links: List[str] = []):
+        self.content_type = content_type
+        self.url = url
+        self.similarity_score = similarity_score
+        self.chunk_text = chunk_text
+        self.found_codebase_links = found_codebase_links
+
+    def to_dict(self):
+        return {
+            'content_type': self.content_type,
+            'url': self.url,
+            'similarity_score': self.similarity_score,
+            'chunk_text': self.chunk_text,
+            'found_codebase_links': self.found_codebase_links
+        }
+    
+class QueryEvaluation(BaseModel):
+    score: float
+    justification: str
+
+class QueryResults(BaseModel):
+    class Config:
+        arbitrary_types_allowed = True
+
+    query_id: str
+    timestamp: str
+    original_question: str
+    rephrased_question: Optional[str]
+    query_type: List[str]
+    top_chunks: List[ChunkResult]
+    chunk_evaluations: List[QueryEvaluation]
+    average_score: float
+    reference_answers: List[str]
+
+# def process_and_evaluate_query(question: Question, llm_prompt):
+#     """
+#     Processes a single query and generates a model answer with evaluation.
+#     """
+#     # Clean question body
+#     cleaned_body = clean_text(question.Body) if question.Body else ""
+
+#     # Search web using question title
+#     search_results = list(search(question.Title, stop=10))
+#     print(f"Found {len(search_results)} search results")
+
+#     # Extract links from search results
+#     link_list = []
+#     for link in search_results:
+#         try:
+#             content = get_html_content(link)
+#             content = clean_text(content) if content else ""
+#             if content:
+#                 extracted_links = extract_links(content)
+#                 link_list.extend(extracted_links)
+#         except Exception as e:
+#             print(f"Error processing link {link}: {str(e)}")
+#             continue
+
+#     # Classify links
+#     classified_links = classifier(list(link_list + search_results))
+#     processed_data = process_and_vectorize_content(classified_links)
+
+#     if not processed_data:
+#         print("No content could be processed")
+#         return None
+
+#     # Analyze chunks
+#     print("\nEvaluating top similar chunks...")
+#     analysis = analyze_similarity_and_extract_links(
+#         question=question.Title,
+#         processed_content=processed_data,
+#         top_k=25
+#     )
+
+#     if not analysis:
+#         print("No analysis results generated")
+#         return None
+
+#     # Generate model answer using question title and body
+#     model_answer_prompt = f"""
+#     Question: {question.Title}
+#     Context: {cleaned_body}
+
+#     Generate a comprehensive answer to the question based on the provided context.
+#     The answer should be detailed, well-explained, and cover all the key aspects of the question.
+#     Return ONLY the generated answer text, no other formatting or text.
+#     """
+
+#     model_answer = llm_prompt(model_answer_prompt)
+#     model_answer_text = model_answer.choices[0].message.content.strip()
+
+#     # Evaluate the model answer
+#     model_answer_evaluation_prompt = f"""
+#     You are a content evaluator. Score how well the generated model answer addresses the original question.
+#     Return ONLY this JSON format:
+#     {{
+#         "score": XX.XX,
+#         "justification": "Detailed analysis of relevance and completeness"
+#     }}
+
+#     Question: {question.Title}
+#     Context: {cleaned_body}
+#     Model Answer: {model_answer_text}
+
+#     Scoring Guidelines:
+#     1. Base score (0-40): Relevance and coverage of key aspects
+#     2. Additional points (0-30): Depth and clarity of explanation
+#     3. Quality points (0-30): Overall coherence and usefulness of the answer
+
+#     Score range: 20-100
+#     """
+
+#     model_answer_evaluation = llm_prompt(model_answer_evaluation_prompt)
+#     model_answer_evaluation_text = model_answer_evaluation.choices[0].message.content.strip()
+#     model_answer_evaluation_result = json.loads(model_answer_evaluation_text)
+
+#     return {
+#         'original_question': question.Title,
+#         'cleaned_body': cleaned_body,
+#         'top_chunks': [chunk.model_dump() for chunk in analysis['top_chunks']],
+#         'all_codebase_links': analysis.get('all_codebase_links', []),
+#         'model_answer': model_answer_text,
+#         'model_answer_score': model_answer_evaluation_result['score'],
+#         'model_answer_justification': model_answer_evaluation_result['justification']
+#     }
+    
+def save_query_results(
+    question_title: str,
+    cleaned_body: str,
+    model_answer: str,
+    model_answer_score: float,
+    #model_answer_justification: str,
+    file_path: str = 'query_results.jsonl'
+) -> bool:
+    try:
+        query_result = {
+            "question_title": question_title,
+            "question_body": cleaned_body,
+            "model_answer": model_answer,
+            "model_answer_score": model_answer_score
+            #"model_answer_justification": model_answer_justification
+        }
+        
+        with open(file_path, 'a', encoding='utf-8') as f:
+            json.dump(query_result, f)
+            f.write('\n')
+        
+        return True
+    
+    except Exception as e:
+        print(f"Error saving query results: {str(e)}")
+        return False
+
+def get_query_results(query_id: Optional[str] = None, file_path: str = 'detailed_query_results.jsonl') -> List[QueryResults]:
+    """
+    Retrieves query results from the JSONL file.
+    
+    Args:
+        query_id: Optional specific query ID to retrieve
+        file_path: Path to results file
+        
+    Returns:
+        List of QueryResults objects
+    """
+    results = []
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                try:
+                    data = json.loads(line)
+                    result = QueryResults(**data)
+                    if query_id is None or result.query_id == query_id:
+                        results.append(result)
+                except Exception as e:
+                    print(f"Error parsing result: {str(e)}")
+                    continue
+    except Exception as e:
+        print(f"Error reading results: {str(e)}")
+    
+    return results
 
 # load json object from jsonl file
 def check_json_file(question, file_name='results.jsonl'):
@@ -117,16 +305,29 @@ def check_query_type(question, file_name='results.jsonl'):
     return check_json_file(question).choices
 
 
-def llm_rephrase(prompt):
-    """Rephrases a question using the OpenAI API."""
+def llm_rephrase(title: str, body: str = ""):
+    """Rephrases a question using both title and body for context."""
+    prompt = f"""
+    Title: {title}
+    Additional Context: {body}
+
+    Rephrase the question using both the title and context provided. 
+    Your response should:
+    1. Be a single question
+    2. Incorporate relevant details from both title and context
+    3. Not be too lengthy
+    4. Keep the original meaning
+    5. Only return the rephrased question with no additional text
+    """
+    
     chat_completion = client.chat.completions.create(
         messages=[
             {
                 'role': 'user',
-                'content': f'slightly rephrase the question "{prompt}" and only produce the rephrased question with nothing else. You are alowed to use some of the original words in the question, but try not to end up with someting too close to the original question. You must not change the meaning of the question or add unnecessarey information or words as much as possible.',
+                'content': prompt,
             }
         ],
-        model='llama3.2',
+        model='llamma3.1',
         temperature=0,
     )
     return chat_completion
@@ -140,7 +341,7 @@ def llm_prompt(prompt):
                 'content': f'{prompt}',
             }
         ],
-        model='llama3.2',
+        model='llama3.1',
         temperature=0,
     )
     return chat_completion
@@ -335,11 +536,137 @@ def process_questions(path: str, limit: int = 5):
                 lines.append(line)
 
     for line in lines:
-        # try:
+        try:
             json_data = json.loads(line)
             org_question = Question(**json_data)
             check_query_type(org_question.Title)
 
+            print("\nProcessing question:", org_question.Id)
+            print("Original question:", org_question.Title)
+            #print("Question body:", org_question.Body)
+            
+            # Store known repos with normalized URLs
+            #known_repos = list(org_question.Repos)
+            #ans_title_repo[org_question.Title] = known_repos
+            
+            # Get rephrased question
+            #rep_question = llm_rephrase(org_question.Title, org_question.Body)
+            #rephrased = rep_question.choices[0].message.content 
+            #+ cheatcode
+            #print("Rephrased question:", rephrased)
+            
+            # Get search results
+            search_results = list(search(org_question.Title, stop=10))  # Convert generator to list
+            print("Found initial results:", len(search_results))
+
+            # Extract links from content
+            link_list = []
+            for link in search_results:
+                content = get_html_content(link)
+                content = clean_text(content)
+                if content:
+                    extracted_links = extract_links(content)
+                    link_list.extend(extracted_links)
+
+            # Normalize and classify all links
+            classified_links = classifier(list(link_list + search_results))
+            
+            # Process and vectorize content
+            processed_data = process_and_vectorize_content(classified_links)
+            
+            # Store results with additional metadata
+            title_repo[org_question.Title] = {
+                'classified_links': classified_links,
+                'processed_content': processed_data,
+                'original_question': org_question.Title,
+                #'rephrased_question': rephrased,
+                'question_id': org_question.Id
+            }
+
+            # Print statistics
+            print(f"\nClassified results:")
+            print(f"- Codebases: {len(classified_links['codebases'])}")
+            print(f"- Articles: {len(classified_links['articles'])}")
+            print(f"- Forums: {len(classified_links['forums'])}")
+            
+            if processed_data:
+                print(f"\nProcessed content:")
+                print(f"- Total chunks: {processed_data['vectors'].shape[0]}")
+                print(f"- Vector dimensions: {processed_data['vectors'].shape[1]}")
+
+        except Exception as e:
+            print(f"Error processing question: {str(e)}")
+            continue
+
+    return title_repo, classified_links
+    
+def update_process_questions(path: str, limit: int = 5):
+    """Modified process_questions function to include result storage."""
+    title_repo, classified_links = process_questions(path, limit)
+    
+    for title, data in title_repo.items():
+        processed_content = data.get('processed_content')
+        if processed_content:
+            try:
+                # Get query type
+                query_type = check_query_type(title)
+                
+                # Get original question body from data
+                question_body = data.get('Body', '')
+                
+                # Get reference answers/repos
+                reference_answers = data.get('Repos', [])
+                
+                # Analyze similarity
+                analysis = analyze_similarity_and_extract_links(
+                    question=title,
+                    processed_content=processed_content,
+                    top_k=25
+                )
+                
+                # Store evaluations
+                evaluations = []
+                if analysis:
+                    for chunk in analysis['top_chunks']:
+                        evaluation_prompt = f"""You are a content evaluator. Score how well this content answers the question.
+                        Return ONLY this JSON format:
+                        {{
+                            "score": XX.XX,
+                            "justification": "Detailed analysis of relevance"
+                        }}
+
+                        Question: {title}
+                        Content to evaluate: {chunk['chunk_text']}
+
+                        Scoring Guidelines:
+                        1. Base score (0-40): Relevant programming concepts
+                        2. Additional points (0-30): Code examples
+                        3. Quality points (0-30): Clarity of explanation
+                        """
+                        
+                        try:
+                            evaluation = llm_prompt(evaluation_prompt)
+                            response_text = evaluation.choices[0].message.content.strip()
+                            response_text = response_text.replace('\n', ' ').replace('\r', '')
+                            
+                            # Clean and parse JSON response
+                            if not response_text.startswith('{'): 
+                                response_text = '{' + response_text.split('{', 1)[1]
+                            if not response_text.endswith('}'): 
+                                response_text = response_text.rsplit('}', 1)[0] + '}'
+                                
+                            result = json.loads(response_text)
+                            evaluations.append(result)
+                            
+                        except Exception as e:
+                            print(f"Evaluation failed: {str(e)}")
+                            continue
+                
+            except Exception as e:
+                print(f"Error processing question {title}: {str(e)}")
+                continue
+    
+    return title_repo, classified_links
 
 def analyze_similarity_and_extract_links(question: str, processed_content: dict, top_k: int = 25):
     """Analyzes chunk similarity using LSA and extracts codebase links from top chunks."""
@@ -396,32 +723,56 @@ def analyze_similarity_and_extract_links(question: str, processed_content: dict,
 
 def create_candidate_list(classified_links: dict, analysis_results: dict) -> dict:
     """Creates and sorts a candidate list based on occurrences."""
+
+    codebase_counts = Counter()
+    forum_counts = Counter()
+    article_counts = Counter()
     # Combine all codebase links
-    all_links = set(classified_links['codebases'])
-    all_links.update(analysis_results['all_codebase_links'])
+    #all_links = set(classified_links['codebases'])
+    #all_links.update(analysis_results['all_codebase_links'])
     
     # Count occurrences in chunks
-    link_counts = Counter()
+    #link_counts = Counter()
     
     # Count in original classified links
-    for link in classified_links['codebases']:
-        link_counts[link] += 1
+    for link in classified_links.get['codebases', []]:
+        codebase_counts[link] += 1
+
+    for link in classified_links.get('forums', []):
+        forum_counts[link] += 1
+
+    for link in classified_links.get('articles', []):
+        article_counts[link] += 1
     
     # Count in top chunks
-    for chunk in analysis_results['top_chunks']:
-        for link in chunk['found_codebase_links']:
-            link_counts[link] += 1        
-    
-    unique_links = set()
-    sorted_candidates = []
+    #for chunk in analysis_results['top_chunks']:
+        #for link in chunk['found_codebase_links']:
+            #link_counts[link] += 1    
 
-    for link, count in link_counts.most_common():
-        if link not in unique_links:
-            unique_links.add(link)
-            sorted_candidates.append({
-                'url': link,
-                'occurrences': count
-            })
+    for chunk in analysis_results.get('top_chunks', []):
+        for link in chunk.get('found_codebase_links', []):
+            codebase_counts[link] += 1        
+        for link in chunk.get('found_forum_links', []):
+            forum_counts[link] += 1        
+        for link in chunk.get('found_article_links', []):
+            article_counts[link] += 1    
+    
+    #unique_links = set()
+    #sorted_candidates = []
+
+    # for link, count in link_counts.most_common():
+    #     if link not in unique_links:
+    #         unique_links.add(link)
+    #         sorted_candidates.append({
+    #             'url': link,
+    #             'occurrences': count
+    #         })
+
+    sorted_candidates = {
+        'codebases': [{'url': link, 'occurrences': count} for link, count in codebase_counts.most_common()],
+        'forums': [{'url': link, 'occurrences': count} for link, count in forum_counts.most_common()],
+        'articles': [{'url': link, 'occurrences': count} for link, count in article_counts.most_common()],
+    }
 
     return sorted_candidates
 
@@ -586,6 +937,17 @@ def extract_from_top_candidates(ranked_candidates: List[dict], k: int = 3) -> Li
     
     return results
 
+def normalize_repo_url(url: str) -> str:
+    """Normalize GitHub URLs for comparison"""
+    url = url.strip('/')  # Removed .lower()
+    # Remove protocol
+    url = re.sub(r'https?://', '', url)
+    # Remove www
+    url = re.sub(r'www\.', '', url)
+    # Remove .git extension
+    url = re.sub(r'\.git$', '', url)
+    return url
+
 def evaluate_model_accuracy(results: dict, known_repos: dict) -> dict:
     """Evaluates model accuracy by comparing found repositories with known repositories."""
     total_matches = 0
@@ -647,20 +1009,196 @@ def evaluate_model_accuracy(results: dict, known_repos: dict) -> dict:
         'question_metrics': question_metrics
     }
 
+def score_model_answer(question_title: str, cleaned_body: str, model_answer: str) -> dict:
+    """
+    Scores the model answer based on how well it answers the original query.
+    
+    Args:
+        question_title (str): The original question title.
+        question_body (str): The original question body.
+        model_answer (str): The generated model answer.
+        
+    Returns:
+        A dictionary with the score and justification.
+    """
+    try:
+        score_prompt = f"""
+        You are an expert evaluator tasked with assessing the quality and comprehensiveness of model answers to technical questions. Your evaluation should be thorough and balanced.
+
+        Original Question:
+        Title: {question_title}
+        Body: {cleaned_body}
+
+        Model Answer:
+        {model_answer}
+
+        Evaluate the answer considering:
+        1. Direct relevance to the question
+        2. Comprehensiveness of the explanation
+        3. Technical accuracy and depth
+        4. Use of cross-references and citations
+        5. Clarity and organization
+        6. Practical applicability
+
+        Scoring Guidelines:
+        - 90-100: Exceptional answer that exceeds expectations
+        - 80-89: Strong answer with comprehensive coverage
+        - 70-79: Solid answer that meets requirements
+        - 60-69: Adequate answer with room for improvement
+        - Below 60: Answer needs significant improvement
+
+        Additional points are awarded for:
+        - Effective cross-referencing and source integration (+5-10)
+        - Practical examples and implementation details (+5-10)
+        - Addressing edge cases or potential issues (+5-10)
+
+        IMPORTANT: The score must be a numerical value between 00.00 and 100.00.
+        IMPORTANT: No line breaks or special characters
+        IMPORTANT: Use only regular quotes ('') and escape them if needed
+        IMPORTANT: Justification should be concise and in a single line
+
+        Provide your evaluation in the following JSON format:
+        {{
+            "score": XX.XX,
+            "justification": "Detailed analysis of the answer's strengths and areas for improvement, with specific examples from the response."
+        }}
+        """
+        
+        score_response = llm_prompt(score_prompt)
+        score_result = json.loads(score_response.choices[0].message.content.strip())
+        return score_result
+    
+    except Exception as e:
+        print(f"Error scoring model answer: {str(e)}")
+        return {"score": 0, "justification": "Error occurred during evaluation."}
+
 if __name__ == "__main__":
     print("Running main function")
-    """
-    Main function to process questions and evaluate results.
-    - Reads questions from a JSONL file.
-    - Processes each question to classify and vectorize links.
-    - Analyzes content similarity and extracts codebase links.
-    - Creates and re-ranks candidate lists.
-    - Extracts code from top repositories.
-    - Evaluates model accuracy.
-    """
-    path = "../web-raider/questions.jsonl"
-    results, known_repos = process_questions(path, limit=1000)
-    accuracy_list = []
+    path = "../web-raider/first_200_questions.jsonl"
+    skip = 12                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+    query_count = 0
+    with open(path, "r") as file:
+        for line in file:
+            if query_count >= 100:
+                break
+            if query_count < skip:
+                query_count += 1
+                continue
+            # Load question into object
+            json_data = json.loads(line)
+            question = Question(**json_data)
+            print(f"\nProcessing question {question.Id}")
+            print(f"Original question: {question.Title}")
+
+            # Clean question body
+            cleaned_body = clean_text(question.Body) if question.Body else ""
+
+            # Search web using question title
+            #retry = 0
+            #while retry < 5:
+                #try:
+            search_results = list(search(question.Title, stop=10))
+            print(f"Found {len(search_results)} search results")
+                    #break
+                #except:
+                    #time.sleep(600)
+                    #retry += 1
+                
+            
+            # Extract links from search results
+            link_list = []
+            for link in search_results:
+                try:
+                    content = get_html_content(link)
+                    content = clean_text(content) if content else ""
+                    if content:
+                        extracted_links = extract_links(content)
+                        link_list.extend(extracted_links)
+                except Exception as e:
+                    print(f"Error processing link {link}: {str(e)}")
+                    continue
+
+            # Classify links
+            classified_links = classifier(list(link_list + search_results))
+            processed_data = process_and_vectorize_content(classified_links)
+
+            if not processed_data:
+                print("No content could be processed")
+                continue
+
+            # Analyze chunks
+            print("\nEvaluating top similar chunks...")
+            analysis = analyze_similarity_and_extract_links(
+                question=question.Title,
+                processed_content=processed_data,
+                top_k=10
+            )
+
+            if not analysis:
+                print("No analysis results generated")
+                continue
+
+            model_answer = ""
+            for results in analysis["top_chunks"]:
+                model_answer += results["chunk_text"]
+
+            # Generate model answer using question title and body
+            model_answer_prompt = f"""
+            Question: {question.Title}
+            Search Results: {model_answer}
+
+            Please generate a comprehensive answer to the question based on the provided search results. Follow these requirements:
+
+            1. Content Requirements:
+            - Start with a clear, direct answer to the main question
+            - Support key points with specific references to the search results
+            - Ensure all crucial aspects of the question are addressed
+            - Maintain logical flow and coherence throughout the response
+            - Provide relevant examples or explanations where appropriate
+
+            2. Formatting Requirements:
+            - Structure the answer using proper markdown formatting
+            - Use headers (##) to organize main sections if the answer is complex
+            - Format any code snippets using appropriate markdown code blocks
+            - Use italics (*) for emphasis on key terms when relevant
+            - Include proper paragraph breaks for readability
+
+            3. Citation Requirements:
+            - Reference specific parts of the search results to support claims
+            - Use inline citations by mentioning "According to the search results..."
+            - Maintain clear connection between assertions and source material
+
+            4. Quality Check:
+            - Ensure the answer directly addresses the original question
+            - Verify that all information comes from the provided search results
+            - Maintain consistent tone and professional language throughout
+            - Check that the response flows logically from point to point
+
+            Return ONLY the formatted answer text, with no additional meta-text or formatting instructions.
+            """
+
+            model_answer = llm_prompt(model_answer_prompt)
+            model_answer_text = model_answer.choices[0].message.content.strip()
+
+            # Score the model answer
+            model_answer_score = score_model_answer(question.Title, cleaned_body, model_answer_text)
+
+            # Save results
+            save_query_results(
+                question_title=question.Title,
+                cleaned_body= cleaned_body,
+                model_answer=model_answer_text,
+                model_answer_score=model_answer_score['score']
+            )
+                #model_answer_justification=model_answer_score['justification']
+
+            query_count += 1
+
+       
+
+            del()
+
+    print(f"\nFinished processing {query_count} queries")
 
 
 
